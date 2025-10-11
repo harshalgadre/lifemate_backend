@@ -1,139 +1,146 @@
 const express = require('express');
-const { MongoClient } = require('mongodb');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const morgan = require('morgan');
+require('dotenv').config();
+
+// Import database connection
+const connectDB = require('./config/database');
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const oauthRoutes = require('./routes/oauth');
+const passport = require('passport');
+require('./config/passport');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// MongoDB connection URL and Database Name
-const url = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const dbName = 'myproject';
-
-// Middleware
-app.use(express.json());
-
-// Global variable for database connection
-let db;
+const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
-MongoClient.connect(url, { useUnifiedTopology: true })
-  .then(client => {
-    console.log('Connected to MongoDB');
-    db = client.db(dbName);
-  })
-  .catch(error => console.error('MongoDB connection error:', error));
+connectDB();
 
-// Routes
-app.get('/', (req, res) => {
-  res.send('Hello World! This is a basic backend server with MongoDB.');
+// Security middleware
+app.use(helmet());
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+app.use(limiter);
 
+// Logging middlewar
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parsing middleware
+app.use(cookieParser());
+
+// Initialize Passport (stateless)
+app.use(passport.initialize());
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/oauth', oauthRoutes);
+
+// Health check endpoint
 app.get('/health', (req, res) => {
-  const mongoStatus = db ? 'Connected' : 'Disconnected';
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'Server is running',
-    mongodb: mongoStatus
+  res.status(200).json({
+    success: true,
+    message: 'LifeMate API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
-// Basic CRUD operations for a sample collection
-// CREATE - Add a new item
-app.post('/items', async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(500).json({ error: 'Database not connected' });
-    }
-    
-    const collection = db.collection('items');
-    const item = req.body;
-    item.createdAt = new Date();
-    
-    const result = await collection.insertOne(item);
-    res.status(201).json({ id: result.insertedId, ...item });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create item', details: error.message });
-  }
+// Root endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Welcome to LifeMate API - Healthcare Job Platform',
+    version: '1.0.0',
+    documentation: '/api/docs',
+    health: '/health',
+  });
 });
 
-// READ - Get all items
-app.get('/items', async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(500).json({ error: 'Database not connected' });
-    }
-    
-    const collection = db.collection('items');
-    const items = await collection.find({}).toArray();
-    res.status(200).json(items);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch items', details: error.message });
-  }
+// 404 handler for undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.originalUrl,
+  });
 });
 
-// READ - Get item by ID
-app.get('/items/:id', async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(500).json({ error: 'Database not connected' });
-    }
-    
-    const collection = db.collection('items');
-    const item = await collection.findOne({ _id: req.params.id });
-    
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    
-    res.status(200).json(item);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch item', details: error.message });
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => ({
+      field: e.path,
+      message: e.message,
+    }));
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors,
+    });
   }
-});
-
-// UPDATE - Update an item by ID
-app.put('/items/:id', async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(500).json({ error: 'Database not connected' });
-    }
-    
-    const collection = db.collection('items');
-    const item = req.body;
-    item.updatedAt = new Date();
-    
-    const result = await collection.updateOne(
-      { _id: req.params.id },
-      { $set: item }
-    );
-    
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    
-    res.status(200).json({ message: 'Item updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update item', details: error.message });
+  
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    return res.status(400).json({
+      success: false,
+      message: `${field} already exists`,
+    });
   }
-});
-
-// DELETE - Delete an item by ID
-app.delete('/items/:id', async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(500).json({ error: 'Database not connected' });
-    }
-    
-    const collection = db.collection('items');
-    const result = await collection.deleteOne({ _id: req.params.id });
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    
-    res.status(200).json({ message: 'Item deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete item', details: error.message });
+  
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token',
+    });
   }
+  
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Token expired',
+    });
+  }
+  
+  // Default error
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
 });
 
 // Start server
