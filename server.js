@@ -45,7 +45,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Logging middleware
+// Logging middlewar
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
