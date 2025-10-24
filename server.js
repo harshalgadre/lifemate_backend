@@ -12,6 +12,10 @@ const connectDB = require('./config/database');
 // Import routes
 const authRoutes = require('./routes/auth');
 const oauthRoutes = require('./routes/oauth');
+const jobRoutes = require('./routes/jobs');
+const applicationRoutes = require('./routes/applications');
+const savedJobRoutes = require('./routes/savedJobs');
+const employerRoutes = require('./routes/employer');
 const passport = require('passport');
 require('./config/passport');
 
@@ -63,6 +67,10 @@ app.use(passport.initialize());
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/saved-jobs', savedJobRoutes);
+app.use('/api/employer', employerRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
