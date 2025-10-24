@@ -42,8 +42,6 @@ const register = async (req, res) => {
     // Create role-specific profile
     if (role === 'jobseeker') {
       await JobSeeker.create({ user: user._id });
-    } else if (role === 'employer') {
-      await Employer.create({ user: user._id });
     }
 
     // Send verification email

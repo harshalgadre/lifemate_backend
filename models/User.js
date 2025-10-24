@@ -8,8 +8,9 @@ const USER_ROLES = ['jobseeker', 'employer', 'admin'];
  * User Schema - Base user model for all user types
  * Handles common user properties and authentication methods
  */
+
 const userSchema = new mongoose.Schema({
-  // Basic Information
+  // Basic Informatio
   email: {
     type: String,
     required: [true, 'Email is required'],
