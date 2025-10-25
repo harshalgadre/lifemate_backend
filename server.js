@@ -16,6 +16,7 @@ const jobRoutes = require('./routes/jobs');
 const applicationRoutes = require('./routes/applications');
 const savedJobRoutes = require('./routes/savedJobs');
 const employerRoutes = require('./routes/employer');
+const jobSeekerRoutes = require('./routes/jobseeker');
 const passport = require('passport');
 require('./config/passport');
 
@@ -71,6 +72,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/saved-jobs', savedJobRoutes);
 app.use('/api/employer', employerRoutes);
+app.use('/api/jobseeker', jobSeekerRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

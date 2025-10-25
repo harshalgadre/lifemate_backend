@@ -294,11 +294,15 @@ const jobSeekerSchema = new mongoose.Schema({
     url: String,
     filename: String,
     uploadedAt: Date,
+    publicId: String,
+    bytes: Number,
   },
   coverLetter: {
     url: String,
     filename: String,
     uploadedAt: Date,
+    publicId: String,
+    bytes: Number,
   },
   portfolio: [{
     title: {

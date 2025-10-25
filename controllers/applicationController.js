@@ -3,6 +3,7 @@ const Job = require('../models/Job');
 const JobSeeker = require('../models/JobSeeker');
 const Employer = require('../models/Employer');
 const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, forbiddenResponse } = require('../utils/response');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 // Build filters helper
 const buildFilters = (q) => {
@@ -23,7 +24,7 @@ const buildFilters = (q) => {
 exports.apply = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
-    // console.log(job);
+    console.log(job);
     if (!job || !job.isOpen()) return notFoundResponse(res, 'Job not open for applications');
 
     const jobSeeker = await JobSeeker.findOne({ user: req.user._id });
@@ -39,6 +40,30 @@ exports.apply = async (req, res) => {
       coverLetter: req.body.coverLetter || {},
       answers: req.body.answers || [],
     };
+
+    // Handle optional file uploads (multer memory storage is used in route)
+    if (req.files && req.files.resume && req.files.resume[0]) {
+      const file = req.files.resume[0];
+      const up = await uploadToCloudinary(file.buffer, `lifemate/applications/${jobSeeker._id}`, 'raw');
+      payload.resume = {
+        url: up.secure_url,
+        filename: file.originalname,
+        uploadedAt: new Date(),
+        publicId: up.public_id,
+        bytes: up.bytes,
+      };
+    }
+
+    if (req.files && req.files.coverLetterFile && req.files.coverLetterFile[0]) {
+      const file = req.files.coverLetterFile[0];
+      const up = await uploadToCloudinary(file.buffer, `lifemate/applications/${jobSeeker._id}`, 'raw');
+      payload.coverLetter = Object.assign({}, payload.coverLetter, {
+        fileUrl: up.secure_url,
+        filename: file.originalname,
+        publicId: up.public_id,
+        bytes: up.bytes,
+      });
+    }
 
     const application = await Application.create(payload);
     // increment application count on job
