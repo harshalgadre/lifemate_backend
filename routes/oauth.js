@@ -5,9 +5,12 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { generateTokens } = require('../utils/jwt');
 
 // Start Google OAuth flow
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+router.get('/google', (req, res, next) => {
+  const role = (req.query.role || '').toLowerCase();
+  const allowed = ['jobseeker', 'employer'];
+  const state = allowed.includes(role) ? role : 'jobseeker';
+  passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
+});
 
 // Google OAuth callback
 router.get('/google/callback',
@@ -25,6 +28,7 @@ router.get('/google/callback',
       redirectUrl.searchParams.set('accessToken', tokens.accessToken);
       redirectUrl.searchParams.set('refreshToken', tokens.refreshToken);
       redirectUrl.searchParams.set('role', req.user.role);
+      redirectUrl.searchParams.set('provider', 'google');
       
       return res.redirect(redirectUrl.toString());
     } catch (error) {
