@@ -38,10 +38,15 @@ const applicationSchema = new mongoose.Schema({
     url: String,
     filename: String,
     uploadedAt: Date,
+    publicId: String,
+    bytes: Number,
   },
   coverLetter: {
     text: { type: String, trim: true, maxlength: 5000 },
     fileUrl: String,
+    filename: String,
+    publicId: String,
+    bytes: Number,
   },
   answers: [{
     questionId: String,

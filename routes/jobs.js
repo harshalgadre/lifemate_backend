@@ -3,6 +3,7 @@ const router = express.Router();
 const jobController = require('../controllers/jobController');
 const applicationController = require('../controllers/applicationController');
 const { authenticate, optionalAuth, requireEmployerOrAdmin, requireEmployer, requireJobSeeker } = require('../middlewares/auth');
+const { uploadDocument } = require('../middlewares/upload');
 
 // Public/optional-auth listing and details
 router.get('/', optionalAuth, jobController.list);
@@ -14,7 +15,16 @@ router.patch('/:id', authenticate, requireEmployerOrAdmin, jobController.update)
 router.patch('/:id/status', authenticate, requireEmployerOrAdmin, jobController.changeStatus);
 router.delete('/:id', authenticate, requireEmployerOrAdmin, jobController.remove);
 
-// Jobseeker applies to a job
-router.post('/:id/apply', authenticate, requireJobSeeker, applicationController.apply);
+// Jobseeker applies to a job (supports multipart resume/cover letter file)
+router.post(
+  '/:id/apply',
+  authenticate,
+  requireJobSeeker,
+  uploadDocument.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'coverLetterFile', maxCount: 1 }
+  ]),
+  applicationController.apply
+);
 
 module.exports = router;
