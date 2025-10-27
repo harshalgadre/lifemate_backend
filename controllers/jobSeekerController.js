@@ -8,6 +8,19 @@ async function getJobSeekerByUser(userId) {
   return js;
 }
 
+// GET /api/jobseeker/profile
+exports.getMyProfile = async (req, res) => {
+  try {
+    const js = await JobSeeker.findOne({ user: req.user._id })
+      .populate({ path: 'user', select: 'firstName lastName email phone profileImage role' });
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+    return successResponse(res, 200, 'Job seeker profile fetched', { jobSeeker: js });
+  } catch (err) {
+    console.error('Get jobseeker profile error:', err);
+    return errorResponse(res, 500, 'Failed to fetch job seeker profile');
+  }
+};
+
 // POST /api/jobseeker/resume
 exports.uploadResume = async (req, res) => {
   try {
