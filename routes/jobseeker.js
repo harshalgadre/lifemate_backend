@@ -4,6 +4,8 @@ const jobSeekerController = require('../controllers/jobSeekerController');
 const { authenticate, requireJobSeeker } = require('../middlewares/auth');
 const { uploadDocument } = require('../middlewares/upload');
 
+router.get('/profile', authenticate, requireJobSeeker, jobSeekerController.getMyProfile);
+
 router.post('/resume', authenticate, requireJobSeeker, uploadDocument.single('resume'), jobSeekerController.uploadResume);
 router.delete('/resume', authenticate, requireJobSeeker, jobSeekerController.deleteResume);
 

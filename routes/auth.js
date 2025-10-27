@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const { authenticate, requireEmailVerification } = require('../middlewares/auth');
 const passport = require('passport');
 const { validateRegistration, validateLogin, validatePasswordReset, validatePasswordChange } = require('../middlewares/validation');
+const oauthController = require('../controllers/oauthController');
 
 /**
  * Authentication Routes
@@ -24,5 +25,10 @@ router.post('/reset-password/:token', validatePasswordReset, authController.rese
 router.get('/profile', authenticate, authController.getProfile);
 router.put('/profile', authenticate, authController.updateProfile);
 router.put('/change-password', authenticate, validatePasswordChange, authController.changePassword);
+
+// OAuth route aliases (mirror /api/oauth/* under /api/auth/*)
+router.get('/google', oauthController.startGoogle);
+router.get('/google/callback', oauthController.googleCallback);
+router.get('/google/failure', oauthController.googleFailure);
 
 module.exports = router;
