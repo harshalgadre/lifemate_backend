@@ -104,7 +104,7 @@ exports.update = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
     if (!job) return notFoundResponse(res, 'Job not found');
-    // only owner employer or admin
+    // only owner  admin
     if (req.user.role !== 'admin') {
       const employer = await Employer.findOne({ user: req.user._id });
       if (!employer || job.employer.toString() !== employer._id.toString()) {
