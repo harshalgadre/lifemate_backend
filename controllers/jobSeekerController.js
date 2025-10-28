@@ -1,6 +1,6 @@
 const JobSeeker = require('../models/JobSeeker');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
-const { successResponse, errorResponse, notFoundResponse } = require('../utils/response');
+const { successResponse, errorResponse, notFoundResponse, validationErrorResponse } = require('../utils/response');
 
 // helper to find JS profile
 async function getJobSeekerByUser(userId) {
@@ -18,6 +18,53 @@ exports.getMyProfile = async (req, res) => {
   } catch (err) {
     console.error('Get jobseeker profile error:', err);
     return errorResponse(res, 500, 'Failed to fetch job seeker profile');
+  }
+};
+
+// PUT /api/jobseeker/profile
+exports.updateMyProfile = async (req, res) => {
+  try {
+    const js = await JobSeeker.findOne({ user: req.user._id });
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const allowed = ['title','bio','specializations','experience','education','workExperience','skills','certifications','jobPreferences','privacySettings'];
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        let value = req.body[key];
+        // If complex field is sent as string, try to parse JSON
+        if (
+          typeof value === 'string' &&
+          ['specializations','experience','education','workExperience','skills','certifications','jobPreferences','privacySettings'].includes(key)
+        ) {
+          try {
+            value = JSON.parse(value);
+          } catch {
+            // Special handling: experience sent as a number string => map to { totalYears }
+            if (key === 'experience') {
+              const n = Number(value);
+              if (!Number.isNaN(n)) {
+                value = { totalYears: n };
+              }
+            }
+          }
+        }
+        // If experience is a number, wrap it
+        if (key === 'experience' && typeof value === 'number') {
+          value = { totalYears: value };
+        }
+        js.set(key, value);
+      }
+    }
+
+    await js.save();
+    return successResponse(res, 200, 'Job seeker profile updated', { jobSeeker: js });
+  } catch (err) {
+    console.error('Update jobseeker profile error:', err);
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => ({ field: e.path, message: e.message }));
+      return validationErrorResponse(res, errors);
+    }
+    return errorResponse(res, 500, 'Failed to update job seeker profile');
   }
 };
 
