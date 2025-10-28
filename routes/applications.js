@@ -8,6 +8,9 @@ router.get('/me', authenticate, requireJobSeeker, applicationController.listMyAp
 
 // Employer - list applications to employer's jobs => /api/applications/employer
 router.get('/employer', authenticate, requireEmployer, applicationController.listEmployerApplications);
+// Employer - view applications for a specific job
+router.get('/job/:jobId', authenticate, requireEmployer, applicationController.listApplicationsForJob);
+
 
 // Get application by id (controller validates ownership) => /api/applications/:id
 router.get('/:id', authenticate, applicationController.getById);
