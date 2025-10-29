@@ -31,6 +31,10 @@ connectDB();
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://career-made-frontend.vercel.app",
+];
 app.use(
   cors({
     origin: function (origin, callback) {
