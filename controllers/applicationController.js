@@ -1,4 +1,3 @@
-
 const Application = require("../models/Application");
 const Job = require("../models/Job");
 const JobSeeker = require("../models/JobSeeker");
@@ -44,15 +43,19 @@ exports.apply = async (req, res) => {
 
     // Normalize body fields for both JSON and multipart
     let coverLetter = req.body.coverLetter;
-    if (typeof coverLetter === 'string') {
+    if (typeof coverLetter === "string") {
       coverLetter = { text: coverLetter };
-    } else if (!coverLetter || typeof coverLetter !== 'object') {
+    } else if (!coverLetter || typeof coverLetter !== "object") {
       coverLetter = {};
     }
 
     let answers = req.body.answers;
-    if (typeof answers === 'string') {
-      try { answers = JSON.parse(answers); } catch { answers = []; }
+    if (typeof answers === "string") {
+      try {
+        answers = JSON.parse(answers);
+      } catch {
+        answers = [];
+      }
     }
     if (!Array.isArray(answers)) answers = [];
 
@@ -172,7 +175,11 @@ exports.listEmployerApplications = async (req, res) => {
 
     const [items, total] = await Promise.all([
       Application.find(filters)
-        .populate("job jobSeeker")
+        .populate({ path: "job" })
+        .populate({
+          path: "jobSeeker",
+          populate: { path: "user", select: "firstName lastName email phone" },
+        })
         .sort(sort)
         .skip(skip)
         .limit(limit),
@@ -195,9 +202,14 @@ exports.listEmployerApplications = async (req, res) => {
 // GET /applications/:id (owner or employer or admin)
 exports.getById = async (req, res) => {
   try {
-    const application = await Application.findById(req.params.id).populate(
-      "job jobSeeker employer"
-    );
+    const application = await Application.findById(req.params.id)
+      .populate({ path: "job" })
+      .populate({
+        path: "jobSeeker",
+        populate: { path: "user", select: "firstName lastName email phone" },
+      })
+      .populate({ path: "employer" });
+
     if (!application) return notFoundResponse(res, "Application not found");
 
     const isAdmin = req.user.role === "admin";
@@ -267,20 +279,25 @@ exports.updateStatus = async (req, res) => {
 // GET /applications/job/:jobId (employer)
 exports.listApplicationsForJob = async (req, res) => {
   try {
+    const { jobId } = req.params;
+
+    // Ensure requester is the owner of the job
     const employer = await Employer.findOne({ user: req.user._id });
     if (!employer) return errorResponse(res, 403, "Employer profile not found");
 
-    const jobId = req.params.jobId;
-    const job = await Job.findById(jobId);
-    if (!job || job.employer.toString() !== employer._id.toString()) {
+    const job = await Job.findOne({ _id: jobId, employer: employer._id });
+    if (!job)
       return forbiddenResponse(
         res,
-        "Not authorized to view this job’s applications"
+        "Not authorized to view applications for this job"
       );
-    }
 
     const applications = await Application.find({ job: jobId })
-      .populate("jobSeeker", "fullName email phone skills experience resumeUrl")
+      .populate({ path: "job" })
+      .populate({
+        path: "jobSeeker",
+        populate: { path: "user", select: "firstName lastName email phone" },
+      })
       .sort("-appliedAt");
 
     return successResponse(res, 200, "Applications fetched", { applications });
