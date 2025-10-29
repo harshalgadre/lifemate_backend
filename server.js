@@ -32,22 +32,21 @@ app.use(helmet());
 
 // CORS configuration
 const allowedOrigins = [
-  "http://localhost:3000",
   "https://career-made-frontend.vercel.app",
+  "http://localhost:3000",
 ];
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl)
+      // Allow no-origin requests (like from Postman or curl)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log("❌ Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 
