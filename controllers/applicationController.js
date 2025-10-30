@@ -124,6 +124,33 @@ exports.apply = async (req, res) => {
   }
 };
 
+// PATCH /applications/:id/rating (employer/admin)
+exports.setRating = async (req, res) => {
+  try {
+    const { rating } = req.body;
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return validationErrorResponse(res, [{ field: 'rating', message: 'Rating must be between 1 and 5' }]);
+    }
+
+    const application = await Application.findById(req.params.id);
+    if (!application) return notFoundResponse(res, 'Application not found');
+
+    if (req.user.role !== 'admin') {
+      const employer = await Employer.findOne({ user: req.user._id });
+      if (!employer || application.employer.toString() !== employer._id.toString()) {
+        return forbiddenResponse(res, 'Not authorized to rate this application');
+      }
+    }
+
+    application.rating = rating;
+    await application.save();
+    return successResponse(res, 200, 'Rating updated', { application });
+  } catch (err) {
+    console.error('Set rating error:', err);
+    return errorResponse(res, 500, 'Failed to update rating');
+  }
+};
+
 // GET /applications/me (jobseeker)
 exports.listMyApplications = async (req, res) => {
   try {
@@ -198,17 +225,15 @@ exports.listEmployerApplications = async (req, res) => {
     return errorResponse(res, 500, "Failed to fetch applications");
   }
 };
-
-// GET /applications/:id (owner or employer or admin)
 exports.getById = async (req, res) => {
   try {
     const application = await Application.findById(req.params.id)
-      .populate({ path: "job" })
+      .populate('job')
       .populate({
-        path: "jobSeeker",
-        populate: { path: "user", select: "firstName lastName email phone" },
+        path: 'jobSeeker',
+        populate: { path: 'user', select: 'firstName lastName email phone profileImage role' }
       })
-      .populate({ path: "employer" });
+      .populate('employer');
 
     if (!application) return notFoundResponse(res, "Application not found");
 
@@ -227,6 +252,12 @@ exports.getById = async (req, res) => {
           res,
           "Not authorized to view this application"
         );
+      }
+
+      // Mark viewed by employer when appropriate (non-blocking)
+      if (ownsAsEmployer && !application.isViewedByEmployer) {
+        application.isViewedByEmployer = true;
+        application.save().catch(() => {});
       }
     }
 
