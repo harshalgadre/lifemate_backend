@@ -132,7 +132,7 @@ exports.setRating = async (req, res) => {
       return validationErrorResponse(res, [{ field: 'rating', message: 'Rating must be between 1 and 5' }]);
     }
 
-    const application = await Application.findById(req.params.id);
+    const application = await Application.findById(req.params.id).populate('job');
     if (!application) return notFoundResponse(res, 'Application not found');
 
     if (req.user.role !== 'admin') {
@@ -245,8 +245,10 @@ exports.getById = async (req, res) => {
       const ownsAsSeeker =
         jobSeeker &&
         application.jobSeeker.toString() === jobSeeker._id.toString();
-      const ownsAsEmployer =
-        employer && application.employer.toString() === employer._id.toString();
+      const ownsAsEmployer = employer && (
+        application.employer.toString() === employer._id.toString() ||
+        (application.job && application.job.employer && application.job.employer.toString() === employer._id.toString())
+      );
       if (!ownsAsSeeker && !ownsAsEmployer) {
         return forbiddenResponse(
           res,
@@ -276,10 +278,11 @@ exports.updateStatus = async (req, res) => {
 
     if (req.user.role !== "admin") {
       const employer = await Employer.findOne({ user: req.user._id });
-      if (
-        !employer ||
-        application.employer.toString() !== employer._id.toString()
-      ) {
+      const ownsAsEmployer = employer && (
+        application.employer.toString() === employer._id.toString() ||
+        (application.job && application.job.employer && application.job.employer.toString() === employer._id.toString())
+      );
+      if (!ownsAsEmployer) {
         return forbiddenResponse(
           res,
           "Not authorized to update this application"
