@@ -327,6 +327,62 @@ const jobSeekerSchema = new mongoose.Schema({
     },
   }],
   
+  // Projects (for resume builder)
+  projects: [{
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, 'Project title cannot exceed 100 characters'],
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Project description cannot exceed 500 characters'],
+    },
+    technologies: [{
+      type: String,
+      trim: true,
+      maxlength: [50, 'Technology name cannot exceed 50 characters'],
+    }],
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
+    },
+    url: {
+      type: String,
+      trim: true,
+    },
+    role: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Role cannot exceed 100 characters'],
+    },
+  }],
+  
+  // Languages (for resume builder)
+  languages: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [50, 'Language name cannot exceed 50 characters'],
+    },
+    proficiency: {
+      type: String,
+      enum: ['Basic', 'Intermediate', 'Fluent', 'Native'],
+      default: 'Intermediate',
+    },
+  }],
+  
+  // Built Resumes
+  builtResumes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Resume',
+  }],
+  
   // Profile Completion
   profileCompletion: {
     type: Number,

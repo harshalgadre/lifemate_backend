@@ -13,4 +13,14 @@ router.delete('/resume', authenticate, requireJobSeeker, jobSeekerController.del
 router.post('/cover-letter', authenticate, requireJobSeeker, uploadDocument.single('coverLetter'), jobSeekerController.uploadCoverLetter);
 router.delete('/cover-letter', authenticate, requireJobSeeker, jobSeekerController.deleteCoverLetter);
 
+// Projects management
+router.post('/projects', authenticate, requireJobSeeker, jobSeekerController.addProject);
+router.put('/projects/:projectId', authenticate, requireJobSeeker, jobSeekerController.updateProject);
+router.delete('/projects/:projectId', authenticate, requireJobSeeker, jobSeekerController.deleteProject);
+
+// Languages management
+router.post('/languages', authenticate, requireJobSeeker, jobSeekerController.addLanguage);
+router.put('/languages/:languageId', authenticate, requireJobSeeker, jobSeekerController.updateLanguage);
+router.delete('/languages/:languageId', authenticate, requireJobSeeker, jobSeekerController.deleteLanguage);
+
 module.exports = router;
