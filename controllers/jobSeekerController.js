@@ -164,3 +164,140 @@ exports.deleteCoverLetter = async (req, res) => {
     return errorResponse(res, 500, 'Failed to delete cover letter');
   }
 };
+
+// POST /api/jobseeker/projects
+exports.addProject = async (req, res) => {
+  try {
+    const js = await getJobSeekerByUser(req.user._id);
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const { title, description, technologies, startDate, endDate, url, role } = req.body;
+    
+    if (!title) return errorResponse(res, 400, 'Project title is required');
+
+    js.projects.push({ title, description, technologies, startDate, endDate, url, role });
+    await js.save();
+
+    return successResponse(res, 200, 'Project added successfully', { projects: js.projects });
+  } catch (err) {
+    console.error('Add project error:', err);
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => ({ field: e.path, message: e.message }));
+      return validationErrorResponse(res, errors);
+    }
+    return errorResponse(res, 500, 'Failed to add project');
+  }
+};
+
+// PUT /api/jobseeker/projects/:projectId
+exports.updateProject = async (req, res) => {
+  try {
+    const js = await getJobSeekerByUser(req.user._id);
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const project = js.projects.id(req.params.projectId);
+    if (!project) return notFoundResponse(res, 'Project not found');
+
+    const { title, description, technologies, startDate, endDate, url, role } = req.body;
+    
+    if (title !== undefined) project.title = title;
+    if (description !== undefined) project.description = description;
+    if (technologies !== undefined) project.technologies = technologies;
+    if (startDate !== undefined) project.startDate = startDate;
+    if (endDate !== undefined) project.endDate = endDate;
+    if (url !== undefined) project.url = url;
+    if (role !== undefined) project.role = role;
+
+    await js.save();
+
+    return successResponse(res, 200, 'Project updated successfully', { projects: js.projects });
+  } catch (err) {
+    console.error('Update project error:', err);
+    return errorResponse(res, 500, 'Failed to update project');
+  }
+};
+
+// DELETE /api/jobseeker/projects/:projectId
+exports.deleteProject = async (req, res) => {
+  try {
+    const js = await getJobSeekerByUser(req.user._id);
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const project = js.projects.id(req.params.projectId);
+    if (!project) return notFoundResponse(res, 'Project not found');
+
+    project.deleteOne();
+    await js.save();
+
+    return successResponse(res, 200, 'Project deleted successfully', { projects: js.projects });
+  } catch (err) {
+    console.error('Delete project error:', err);
+    return errorResponse(res, 500, 'Failed to delete project');
+  }
+};
+
+// POST /api/jobseeker/languages
+exports.addLanguage = async (req, res) => {
+  try {
+    const js = await getJobSeekerByUser(req.user._id);
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const { name, proficiency } = req.body;
+    
+    if (!name) return errorResponse(res, 400, 'Language name is required');
+
+    js.languages.push({ name, proficiency: proficiency || 'Intermediate' });
+    await js.save();
+
+    return successResponse(res, 200, 'Language added successfully', { languages: js.languages });
+  } catch (err) {
+    console.error('Add language error:', err);
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => ({ field: e.path, message: e.message }));
+      return validationErrorResponse(res, errors);
+    }
+    return errorResponse(res, 500, 'Failed to add language');
+  }
+};
+
+// PUT /api/jobseeker/languages/:languageId
+exports.updateLanguage = async (req, res) => {
+  try {
+    const js = await getJobSeekerByUser(req.user._id);
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const language = js.languages.id(req.params.languageId);
+    if (!language) return notFoundResponse(res, 'Language not found');
+
+    const { name, proficiency } = req.body;
+    
+    if (name !== undefined) language.name = name;
+    if (proficiency !== undefined) language.proficiency = proficiency;
+
+    await js.save();
+
+    return successResponse(res, 200, 'Language updated successfully', { languages: js.languages });
+  } catch (err) {
+    console.error('Update language error:', err);
+    return errorResponse(res, 500, 'Failed to update language');
+  }
+};
+
+// DELETE /api/jobseeker/languages/:languageId
+exports.deleteLanguage = async (req, res) => {
+  try {
+    const js = await getJobSeekerByUser(req.user._id);
+    if (!js) return notFoundResponse(res, 'Job seeker profile not found');
+
+    const language = js.languages.id(req.params.languageId);
+    if (!language) return notFoundResponse(res, 'Language not found');
+
+    language.deleteOne();
+    await js.save();
+
+    return successResponse(res, 200, 'Language deleted successfully', { languages: js.languages });
+  } catch (err) {
+    console.error('Delete language error:', err);
+    return errorResponse(res, 500, 'Failed to delete language');
+  }
+};

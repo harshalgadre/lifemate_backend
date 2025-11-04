@@ -17,9 +17,9 @@ const applicationRoutes = require("./routes/applications");
 const savedJobRoutes = require("./routes/savedJobs");
 const employerRoutes = require("./routes/employer");
 const jobSeekerRoutes = require("./routes/jobseeker");
+const resumeRoutes = require('./routes/resume');
 const adminRoutes = require("./routes/admin");
-const passport = require("passport");
-require("./config/passport");
+const passport =require("./config/passport");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -79,14 +79,15 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // API Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/oauth", oauthRoutes);
-app.use("/api/jobs", jobRoutes);
-app.use("/api/applications", applicationRoutes);
-app.use("/api/saved-jobs", savedJobRoutes);
-app.use("/api/employer", employerRoutes);
-app.use("/api/jobseeker", jobSeekerRoutes);
-app.use("/api/admin", adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/oauth', oauthRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/saved-jobs', savedJobRoutes);
+app.use('/api/employer', employerRoutes);
+app.use('/api/jobseeker', jobSeekerRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/resume', resumeRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
