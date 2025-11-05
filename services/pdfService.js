@@ -39,59 +39,43 @@ async function generateResumePDF(resumeData) {
       const accentColor = "#000000";
       const fontSize = 10;
 
-      // Helper function to add section header with separator line
+      // Helper function to add section header with separator line above
       const addSectionHeader = (title) => {
         doc.moveDown(0.5);
-
-        // Add horizontal line before section
+        
+        // Add light gray separator line before section
         const lineY = doc.y;
         doc
           .moveTo(doc.page.margins.left, lineY)
           .lineTo(doc.page.width - doc.page.margins.right, lineY)
-          .strokeColor("#CCCCCC")
+          .strokeColor("#E0E0E0")
           .lineWidth(0.5)
           .stroke();
-
+        
         doc.moveDown(0.3);
         doc
-          .fontSize(12)
+          .fontSize(11)
           .font("Helvetica-Bold")
-          .fillColor(primaryColor)
-          .text(title);
+          .fillColor("#4169E1") // Royal blue color like frontend
+          .text(title.toUpperCase());
         doc.moveDown(0.3);
-        doc.font("Helvetica");
+        doc.font("Helvetica").fillColor(primaryColor);
       };
 
-      // 1. HEADER - Personal Information (Centered, Large Name)
+      // 1. HEADER - Personal Information (Left-aligned, Large Name)
       const { personalInfo } = resumeData;
       doc
-        .fontSize(24)
+        .fontSize(26)
         .font("Helvetica-Bold")
-        .fillColor(primaryColor)
-        .text(personalInfo.fullName || "N/A", { align: "center" });
+        .fillColor("#000000")
+        .text(personalInfo.fullName || "N/A", { align: "left" });
 
-      doc.moveDown(0.2);
+      doc.moveDown(0.3);
 
-      // Location
-      if (personalInfo.address?.city && personalInfo.address?.state) {
-        doc
-          .fontSize(10)
-          .font("Helvetica")
-          .fillColor(primaryColor)
-          .text(
-            `${personalInfo.address.city}, ${personalInfo.address.state}, ${
-              personalInfo.address.country || "India"
-            }`,
-            { align: "center" }
-          );
-      }
-
-      doc.moveDown(0.2);
-
-      // Contact info line (phone | email | links)
+      // Contact info line (email • phone format)
       const contactInfo = [];
-      if (personalInfo.phone) contactInfo.push(personalInfo.phone);
       if (personalInfo.email) contactInfo.push(personalInfo.email);
+      if (personalInfo.phone) contactInfo.push(personalInfo.phone);
       if (personalInfo.linkedIn)
         contactInfo.push(
           personalInfo.linkedIn.replace(
@@ -108,14 +92,26 @@ async function generateResumePDF(resumeData) {
       if (contactInfo.length > 0) {
         doc
           .fontSize(9)
-          .fillColor("#333333")
-          .text(contactInfo.join("    "), { align: "center" });
+          .font("Helvetica")
+          .fillColor("#666666")
+          .text(contactInfo.join(" • "), { align: "left" });
       }
 
+      // Add horizontal line after contact info
+      doc.moveDown(0.3);
+      const lineY = doc.y;
+      doc
+        .moveTo(doc.page.margins.left, lineY)
+        .lineTo(doc.page.width - doc.page.margins.right, lineY)
+        .strokeColor("#CCCCCC")
+        .lineWidth(1)
+        .stroke();
+
       doc.moveDown(0.5);
+      
+      // PROFESSIONAL SUMMARY SECTION (only if exists)
       if (resumeData.summary && resumeData.summary.trim()) {
-        // PROFESSIONAL SUMMARY SECTION
-        addSectionHeader("Professional Summary");
+        addSectionHeader("PROFESSIONAL SUMMARY");
 
         // Set proper width for text wrapping
         const maxWidth =
@@ -134,119 +130,56 @@ async function generateResumePDF(resumeData) {
         doc.moveDown(0.4);
       }
 
-      // 2. EDUCATION (First, like in the image)
-      if (resumeData.education && resumeData.education.length > 0) {
-        const visibleEdu = resumeData.education.filter(
-          (edu) => edu.isVisible !== false
-        );
-        if (visibleEdu.length > 0) {
-          addSectionHeader("Education");
-
-          visibleEdu.forEach((edu, index) => {
-            // Institution name (bold)
-            doc
-              .fontSize(10)
-              .font("Helvetica-Bold")
-              .fillColor(primaryColor)
-              .text(edu.institution, { continued: false });
-
-            // Degree and year on same line
-            doc
-              .fontSize(9)
-              .font("Helvetica-Oblique")
-              .fillColor("#333333")
-              .text(`${edu.degree} in ${edu.field}`, { continued: true });
-
-            // Year range on right (if available)
-            if (edu.yearOfCompletion) {
-              const startYear = edu.yearOfCompletion - 4; // Assuming 4 year degree
-              doc.text(`    ${startYear}-${edu.yearOfCompletion}`, {
-                align: "left",
-              });
-            }
-
-            // Grade if available
-            if (edu.grade) {
-              doc
-                .fontSize(9)
-                .font("Helvetica")
-                .text(`${edu.grade}`, { align: "left" });
-            }
-
-            if (index < visibleEdu.length - 1) {
-              doc.moveDown(0.4);
-            }
-          });
-        }
-      }
-
-      // 3. TECHNICAL SKILLS
-      if (resumeData.skills && resumeData.skills.length > 0) {
-        const visibleSkills = resumeData.skills.filter(
-          (skill) => skill.isVisible !== false
-        );
-        if (visibleSkills.length > 0) {
-          addSectionHeader("Technical Skills");
-
-          // Group skills by category if possible, otherwise list all
-          const skillNames = visibleSkills.map((s) => s.name).join(", ");
-
-          doc
-            .fontSize(9)
-            .font("Helvetica-Bold")
-            .text("Languages: ", { continued: true })
-            .font("Helvetica")
-            .text(skillNames);
-
-          // If you have technologies/frameworks in projects, show them here
-          doc.moveDown(0.2);
-        }
-      }
-
-      // 4. WORK EXPERIENCE
+      // WORK EXPERIENCE SECTION (only if exists)
       if (resumeData.workExperience && resumeData.workExperience.length > 0) {
         const visibleExp = resumeData.workExperience.filter(
           (exp) => exp.isVisible !== false
         );
         if (visibleExp.length > 0) {
-          addSectionHeader("Experience");
+          addSectionHeader("WORK EXPERIENCE");
 
           visibleExp.forEach((exp, index) => {
-            // Company name (bold) and date range on same line
+            // Position (bold) with date range on same line
             const startDate = formatDate(exp.startDate);
             const endDate = exp.isCurrent ? "Present" : formatDate(exp.endDate);
-
-            // Company name
+            const dateText = `${startDate} - ${endDate}`;
+            
             doc
               .fontSize(10)
               .font("Helvetica-Bold")
-              .fillColor(primaryColor)
-              .text(exp.company, { continued: true });
+              .fillColor("#000000")
+              .text(exp.position || "Position", { continued: true });
 
             // Date range aligned right
-            const dateText = `${startDate} – ${endDate}`;
-            const textWidth = doc.widthOfString(exp.company);
+            const posText = exp.position || "Position";
+            const textWidth = doc.widthOfString(posText);
             const pageWidth =
               doc.page.width - doc.page.margins.left - doc.page.margins.right;
             const dateWidth = doc.widthOfString(dateText);
             const spacesNeeded = pageWidth - textWidth - dateWidth - 20;
 
-            doc.text(
-              " ".repeat(Math.max(1, Math.floor(spacesNeeded / 3))) + dateText
-            );
-
-            // Position (italic)
             doc
               .fontSize(9)
-              .font("Helvetica-Oblique")
-              .fillColor("#333333")
-              .text(exp.position, { continued: true });
+              .font("Helvetica")
+              .fillColor("#666666")
+              .text(
+                " ".repeat(Math.max(1, Math.floor(spacesNeeded / 3))) + dateText
+              );
 
-            // Location on right
+            // Company name (red/orange color like frontend)
+            doc
+              .fontSize(9)
+              .font("Helvetica")
+              .fillColor("#D2691E")
+              .text(exp.company || "Company");
+
+            // Location (if available)
             if (exp.location) {
-              doc.text(`    ${exp.location}`);
-            } else {
-              doc.text("");
+              doc
+                .fontSize(9)
+                .font("Helvetica")
+                .fillColor("#666666")
+                .text(exp.location);
             }
 
             // Description
@@ -255,7 +188,7 @@ async function generateResumePDF(resumeData) {
               doc
                 .fontSize(9)
                 .font("Helvetica")
-                .fillColor(primaryColor)
+                .fillColor("#333333")
                 .text(exp.description);
             }
 
@@ -266,24 +199,127 @@ async function generateResumePDF(resumeData) {
                 doc
                   .fontSize(9)
                   .font("Helvetica")
+                  .fillColor("#333333")
                   .text(`• ${achievement}`, { indent: 0, paragraphGap: 2 });
               });
             }
 
             if (index < visibleExp.length - 1) {
+              doc.moveDown(0.6);
+            }
+          });
+        }
+      }
+
+      // EDUCATION SECTION (only if exists)
+      if (resumeData.education && resumeData.education.length > 0) {
+        const visibleEdu = resumeData.education.filter(
+          (edu) => edu.isVisible !== false
+        );
+        if (visibleEdu.length > 0) {
+          addSectionHeader("EDUCATION");
+
+          visibleEdu.forEach((edu, index) => {
+            // Degree and field (bold)
+            doc
+              .fontSize(10)
+              .font("Helvetica-Bold")
+              .fillColor("#000000")
+              .text(`${edu.degree} in ${edu.field}`);
+
+            // Institution name (orange/brown color like frontend)
+            doc
+              .fontSize(9)
+              .font("Helvetica")
+              .fillColor("#D2691E")
+              .text(edu.institution);
+
+            // Year
+            if (edu.yearOfCompletion) {
+              doc
+                .fontSize(9)
+                .font("Helvetica")
+                .fillColor("#666666")
+                .text(`${edu.yearOfCompletion}`);
+            }
+
+            // Grade if available
+            if (edu.grade) {
+              doc
+                .fontSize(9)
+                .font("Helvetica")
+                .fillColor("#666666")
+                .text(`Grade: ${edu.grade}`);
+            }
+
+            if (index < visibleEdu.length - 1) {
               doc.moveDown(0.5);
             }
           });
         }
       }
 
-      // 5. PROJECTS
+      // SKILLS SECTION (only if exists)
+      if (resumeData.skills && resumeData.skills.length > 0) {
+        const visibleSkills = resumeData.skills.filter(
+          (skill) => skill.isVisible !== false
+        );
+        if (visibleSkills.length > 0) {
+          addSectionHeader("SKILLS");
+
+          // Display skills as rounded badges (like frontend)
+          let xPos = doc.page.margins.left;
+          const yStart = doc.y;
+          const badgeHeight = 18;
+          const badgePadding = 10;
+          const badgeSpacing = 8;
+          const lineHeight = 26;
+          let currentLineY = doc.y;
+
+          visibleSkills.forEach((skill, index) => {
+            const skillText = skill.name;
+            doc.fontSize(9).font("Helvetica");
+            const textWidth = doc.widthOfString(skillText);
+            const badgeWidth = textWidth + (badgePadding * 2);
+            const pageWidth = doc.page.width - doc.page.margins.right;
+
+            // Check if badge fits on current line
+            if (xPos + badgeWidth > pageWidth && index > 0) {
+              xPos = doc.page.margins.left;
+              currentLineY += lineHeight;
+            }
+
+            // Draw rounded rectangle badge
+            doc
+              .roundedRect(xPos, currentLineY, badgeWidth, badgeHeight, 4)
+              .fillAndStroke("#E8E8E8", "#E8E8E8");
+
+            // Draw skill text (centered vertically in badge)
+            doc
+              .fontSize(9)
+              .font("Helvetica")
+              .fillColor("#333333")
+              .text(skillText, xPos + badgePadding, currentLineY + 4, {
+                width: textWidth,
+                lineBreak: false
+              });
+
+            xPos += badgeWidth + badgeSpacing;
+          });
+
+          // Move doc.y to after the last line of badges
+          doc.y = currentLineY + badgeHeight + 5;
+          doc.moveDown(0.3);
+        }
+      }
+
+      // PROJECTS SECTION (only if exists)
       if (resumeData.projects && resumeData.projects.length > 0) {
         const visibleProjects = resumeData.projects.filter(
           (proj) => proj.isVisible !== false
         );
         if (visibleProjects.length > 0) {
-          addSectionHeader("Projects");
+          addSectionHeader("PROJECTS");
 
           visibleProjects.forEach((proj, index) => {
             // Project title with technologies and links in same line
@@ -331,13 +367,13 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // 6. EXTRACURRICULAR AND ACHIEVEMENTS (Custom Sections)
+      // CUSTOM SECTIONS (only if exists)
       if (resumeData.customSections && resumeData.customSections.length > 0) {
         const visibleSections = resumeData.customSections.filter(
           (sec) => sec.isVisible !== false
         );
         if (visibleSections.length > 0) {
-          addSectionHeader("Extracurricular and Achievements");
+          addSectionHeader("EXTRACURRICULAR AND ACHIEVEMENTS");
 
           visibleSections.forEach((section) => {
             if (section.items && section.items.length > 0) {
@@ -359,13 +395,13 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // 7. CERTIFICATIONS (if any)
+      // CERTIFICATIONS SECTION (only if exists)
       if (resumeData.certifications && resumeData.certifications.length > 0) {
         const visibleCerts = resumeData.certifications.filter(
           (cert) => cert.isVisible !== false
         );
         if (visibleCerts.length > 0) {
-          addSectionHeader("Certifications");
+          addSectionHeader("CERTIFICATIONS");
 
           visibleCerts.forEach((cert, index) => {
             doc
@@ -383,13 +419,13 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // 8. LANGUAGES (if any)
+      // LANGUAGES SECTION (only if exists)
       if (resumeData.languages && resumeData.languages.length > 0) {
         const visibleLangs = resumeData.languages.filter(
           (lang) => lang.isVisible !== false
         );
         if (visibleLangs.length > 0) {
-          addSectionHeader("Languages");
+          addSectionHeader("LANGUAGES");
 
           const langText = visibleLangs
             .map((lang) => `${lang.name} (${lang.proficiency})`)

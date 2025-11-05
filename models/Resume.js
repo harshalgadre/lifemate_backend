@@ -1,48 +1,52 @@
 const mongoose = require('mongoose');
 
 /**
- * Resume Schema - Built resumes using resume builder
- * Stores structured resume data and generated PDF
+ * Resume Schema - Complete Resume Management System
+ * Simplified schema with essential fields only
  */
 const resumeSchema = new mongoose.Schema({
-  // Reference to JobSeeker
-  jobSeeker: {
+  // Reference to User (not JobSeeker)
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'JobSeeker',
+    ref: 'User',
     required: true,
     index: true,
   },
 
-  // Resume metadata
+  // Resume title
   title: {
     type: String,
-    required: true,
+    required: [true, 'Resume title is required'],
     trim: true,
     maxlength: [100, 'Resume title cannot exceed 100 characters'],
-    default: 'My Resume',
   },
-
-  // Template selection
-  // templateId: {
-  //   type: String,
-  //   required: true,
-  //   enum: ['classic', 'modern', 'professional', 'creative', 'minimal'],
-  //   default: 'modern',
-  // },
 
   // Personal Information
   personalInfo: {
     fullName: {
       type: String,
-      required: true,
+      required: [true, 'Full name is required'],
       trim: true,
     },
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       trim: true,
+      lowercase: true,
     },
     phone: {
+      type: String,
+      trim: true,
+    },
+    linkedIn: {
+      type: String,
+      trim: true,
+    },
+    github: {
+      type: String,
+      trim: true,
+    },
+    website: {
       type: String,
       trim: true,
     },
@@ -53,18 +57,6 @@ const resumeSchema = new mongoose.Schema({
       country: String,
       zipCode: String,
     },
-    linkedIn: {
-      type: String,
-      trim: true,
-    },
-    // website: {
-    //   type: String,
-    //   trim: true,
-    // },
-    // github: {
-    //   type: String,
-    //   trim: true,
-    // },
   },
 
   // Professional Summary
@@ -74,7 +66,7 @@ const resumeSchema = new mongoose.Schema({
     maxlength: [1000, 'Summary cannot exceed 1000 characters'],
   },
 
-  // Education (copied from JobSeeker but can be customized)
+  // Education
   education: [{
     degree: {
       type: String,
@@ -153,10 +145,9 @@ const resumeSchema = new mongoose.Schema({
       required: true,
       trim: true,
     },
-    level: {
+    proficiency: {
       type: String,
       enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
-      default: 'Intermediate',
     },
     isVisible: {
       type: Boolean,
@@ -187,10 +178,6 @@ const resumeSchema = new mongoose.Schema({
       type: String,
       trim: true,
     },
-    credentialUrl: {
-      type: String,
-      trim: true,
-    },
     isVisible: {
       type: Boolean,
       default: true,
@@ -213,12 +200,6 @@ const resumeSchema = new mongoose.Schema({
       type: String,
       trim: true,
     }],
-    startDate: {
-      type: Date,
-    },
-    endDate: {
-      type: Date,
-    },
     url: {
       type: String,
       trim: true,
@@ -268,12 +249,6 @@ const resumeSchema = new mongoose.Schema({
     },
   }],
 
-  // Section Order and Visibility
-  sectionOrder: [{
-    type: String,
-    enum: ['summary', 'education', 'workExperience', 'skills', 'certifications', 'projects', 'languages', 'customSections'],
-  }],
-
   // Styling Options
   styling: {
     fontFamily: {
@@ -302,22 +277,18 @@ const resumeSchema = new mongoose.Schema({
     },
   },
 
-  // Generated PDF
-  generatedPdf: {
-    url: String,
-    filename: String,
-    publicId: String,
-    bytes: Number,
-    generatedAt: Date,
+  // PDF URL and Public ID
+  pdfUrl: {
+    type: String,
+    trim: true,
+  },
+  pdfPublicId: {
+    type: String,
+    trim: true,
   },
 
-  // Status
+  // Default resume flag
   isDefault: {
-    type: Boolean,
-    default: false,
-  },
-
-  isPublic: {
     type: Boolean,
     default: false,
   },
@@ -332,10 +303,6 @@ const resumeSchema = new mongoose.Schema({
       type: Number,
       default: 0,
     },
-    timesUsedInApplications: {
-      type: Number,
-      default: 0,
-    },
   },
 }, {
   timestamps: true,
@@ -344,14 +311,14 @@ const resumeSchema = new mongoose.Schema({
 });
 
 // Indexes
-resumeSchema.index({ jobSeeker: 1, isDefault: 1 });
-resumeSchema.index({ jobSeeker: 1, createdAt: -1 });
+resumeSchema.index({ userId: 1, isDefault: 1 });
+resumeSchema.index({ userId: 1, createdAt: -1 });
 
-// Ensure only one default resume per job seeker
+// Ensure only one default resume per user
 resumeSchema.pre('save', async function(next) {
   if (this.isDefault && this.isModified('isDefault')) {
     await this.constructor.updateMany(
-      { jobSeeker: this.jobSeeker, _id: { $ne: this._id } },
+      { userId: this.userId, _id: { $ne: this._id } },
       { $set: { isDefault: false } }
     );
   }
