@@ -113,14 +113,25 @@ async function generateResumePDF(resumeData) {
       }
 
       doc.moveDown(0.5);
-      if (resumeData.summary) {
-        // 1. SUMMARY
+      if (resumeData.summary && resumeData.summary.trim()) {
+        // PROFESSIONAL SUMMARY SECTION
         addSectionHeader("Professional Summary");
+
+        // Set proper width for text wrapping
+        const maxWidth =
+          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
         doc
-          .fontSize(10)
+          .fontSize(fontSize)
           .font("Helvetica")
           .fillColor(primaryColor)
-          .text(resumeData.summary);
+          .text(resumeData.summary, {
+            align: "left",
+            width: maxWidth,
+            lineGap: 3,
+          });
+
+        doc.moveDown(0.4);
       }
 
       // 2. EDUCATION (First, like in the image)
