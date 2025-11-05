@@ -23,12 +23,12 @@ const resumeSchema = new mongoose.Schema({
   },
 
   // Template selection
-  templateId: {
-    type: String,
-    required: true,
-    enum: ['classic', 'modern', 'professional', 'creative', 'minimal'],
-    default: 'modern',
-  },
+  // templateId: {
+  //   type: String,
+  //   required: true,
+  //   enum: ['classic', 'modern', 'professional', 'creative', 'minimal'],
+  //   default: 'modern',
+  // },
 
   // Personal Information
   personalInfo: {
@@ -57,14 +57,14 @@ const resumeSchema = new mongoose.Schema({
       type: String,
       trim: true,
     },
-    website: {
-      type: String,
-      trim: true,
-    },
-    github: {
-      type: String,
-      trim: true,
-    },
+    // website: {
+    //   type: String,
+    //   trim: true,
+    // },
+    // github: {
+    //   type: String,
+    //   trim: true,
+    // },
   },
 
   // Professional Summary

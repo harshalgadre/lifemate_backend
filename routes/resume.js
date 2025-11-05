@@ -4,7 +4,7 @@ const resumeController = require('../controllers/resumeController');
 const { authenticate, requireJobSeeker } = require('../middlewares/auth');
 
 // Get available templates
-router.get('/templates', authenticate, requireJobSeeker, resumeController.getTemplates);
+// router.get('/templates', authenticate, requireJobSeeker, resumeController.getTemplates);
 
 // CRUD operations for resumes
 router.post('/build', authenticate, requireJobSeeker, resumeController.createResume);

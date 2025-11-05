@@ -8,47 +8,47 @@ const { successResponse, errorResponse, notFoundResponse, validationErrorRespons
  * GET /api/resume/templates
  * Get available resume templates
  */
-exports.getTemplates = async (req, res) => {
-  try {
-    const templates = [
-      {
-        id: 'classic',
-        name: 'Classic',
-        description: 'Traditional resume format with clean layout',
-        preview: '/templates/classic-preview.png',
-      },
-      {
-        id: 'modern',
-        name: 'Modern',
-        description: 'Contemporary design with accent colors',
-        preview: '/templates/modern-preview.png',
-      },
-      {
-        id: 'professional',
-        name: 'Professional',
-        description: 'Corporate-friendly format',
-        preview: '/templates/professional-preview.png',
-      },
-      {
-        id: 'creative',
-        name: 'Creative',
-        description: 'Eye-catching design for creative roles',
-        preview: '/templates/creative-preview.png',
-      },
-      {
-        id: 'minimal',
-        name: 'Minimal',
-        description: 'Simple and elegant layout',
-        preview: '/templates/minimal-preview.png',
-      },
-    ];
+// exports.getTemplates = async (req, res) => {
+//   try {
+//     const templates = [
+//       {
+//         id: 'classic',
+//         name: 'Classic',
+//         description: 'Traditional resume format with clean layout',
+//         preview: '/templates/classic-preview.png',
+//       },
+//       {
+//         id: 'modern',
+//         name: 'Modern',
+//         description: 'Contemporary design with accent colors',
+//         preview: '/templates/modern-preview.png',
+//       },
+//       {
+//         id: 'professional',
+//         name: 'Professional',
+//         description: 'Corporate-friendly format',
+//         preview: '/templates/professional-preview.png',
+//       },
+//       {
+//         id: 'creative',
+//         name: 'Creative',
+//         description: 'Eye-catching design for creative roles',
+//         preview: '/templates/creative-preview.png',
+//       },
+//       {
+//         id: 'minimal',
+//         name: 'Minimal',
+//         description: 'Simple and elegant layout',
+//         preview: '/templates/minimal-preview.png',
+//       },
+//     ];
 
-    return successResponse(res, 200, 'Templates fetched successfully', { templates });
-  } catch (err) {
-    console.error('Get templates error:', err);
-    return errorResponse(res, 500, 'Failed to fetch templates');
-  }
-};
+//     return successResponse(res, 200, 'Templates fetched successfully', { templates });
+//   } catch (err) {
+//     console.error('Get templates error:', err);
+//     return errorResponse(res, 500, 'Failed to fetch templates');
+//   }
+// };
 
 /**
  * POST /api/resume/build
