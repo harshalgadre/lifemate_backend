@@ -42,7 +42,7 @@ async function generateResumePDF(resumeData) {
       // Helper function to add section header with separator line above
       const addSectionHeader = (title) => {
         doc.moveDown(0.5);
-        
+
         // Add light gray separator line before section
         const lineY = doc.y;
         doc
@@ -51,7 +51,7 @@ async function generateResumePDF(resumeData) {
           .strokeColor("#E0E0E0")
           .lineWidth(0.5)
           .stroke();
-        
+
         doc.moveDown(0.3);
         doc
           .fontSize(11)
@@ -108,7 +108,7 @@ async function generateResumePDF(resumeData) {
         .stroke();
 
       doc.moveDown(0.5);
-      
+
       // PROFESSIONAL SUMMARY SECTION (only if exists)
       if (resumeData.summary && resumeData.summary.trim()) {
         addSectionHeader("PROFESSIONAL SUMMARY");
@@ -143,7 +143,7 @@ async function generateResumePDF(resumeData) {
             const startDate = formatDate(exp.startDate);
             const endDate = exp.isCurrent ? "Present" : formatDate(exp.endDate);
             const dateText = `${startDate} - ${endDate}`;
-            
+
             doc
               .fontSize(10)
               .font("Helvetica-Bold")
@@ -280,7 +280,7 @@ async function generateResumePDF(resumeData) {
             const skillText = skill.name;
             doc.fontSize(9).font("Helvetica");
             const textWidth = doc.widthOfString(skillText);
-            const badgeWidth = textWidth + (badgePadding * 2);
+            const badgeWidth = textWidth + badgePadding * 2;
             const pageWidth = doc.page.width - doc.page.margins.right;
 
             // Check if badge fits on current line
@@ -301,7 +301,7 @@ async function generateResumePDF(resumeData) {
               .fillColor("#333333")
               .text(skillText, xPos + badgePadding, currentLineY + 4, {
                 width: textWidth,
-                lineBreak: false
+                lineBreak: false,
               });
 
             xPos += badgeWidth + badgeSpacing;
@@ -396,6 +396,31 @@ async function generateResumePDF(resumeData) {
       }
 
       // CERTIFICATIONS SECTION (only if exists)
+      // if (resumeData.certifications && resumeData.certifications.length > 0) {
+      //   const visibleCerts = resumeData.certifications.filter(
+      //     (cert) => cert.isVisible !== false
+      //   );
+      //   if (visibleCerts.length > 0) {
+      //     addSectionHeader("CERTIFICATIONS");
+
+      //     visibleCerts.forEach((cert, index) => {
+      //       doc
+      //         .fontSize(9)
+      //         .font("Helvetica")
+      //         .fillColor(primaryColor)
+      //         .text(`• ${cert.name} - ${cert.issuingOrganization}`, {
+      //           indent: 0,
+      //         });
+
+      //       if (index < visibleCerts.length - 1) {
+      //         doc.moveDown(0.2);
+      //       }
+      //     });
+      //   }
+      // }
+
+      // LANGUAGES SECTION (only if exists)
+      // CERTIFICATIONS SECTION (only if exists)
       if (resumeData.certifications && resumeData.certifications.length > 0) {
         const visibleCerts = resumeData.certifications.filter(
           (cert) => cert.isVisible !== false
@@ -403,38 +428,72 @@ async function generateResumePDF(resumeData) {
         if (visibleCerts.length > 0) {
           addSectionHeader("CERTIFICATIONS");
 
+          const maxWidth =
+            doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
           visibleCerts.forEach((cert, index) => {
+            // Certification name and issuing organization
+            const certText = `${cert.name} - ${cert.issuingOrganization}`;
+
             doc
               .fontSize(9)
               .font("Helvetica")
               .fillColor(primaryColor)
-              .text(`• ${cert.name} - ${cert.issuingOrganization}`, {
+              .text(`• ${certText}`, {
+                width: maxWidth,
+                align: "left", // ← ADD THIS
                 indent: 0,
+                paragraphGap: 2,
               });
 
+            // Add issue date if available
+            if (cert.issueDate) {
+              const issueDate = formatDate(cert.issueDate);
+              doc
+                .fontSize(8)
+                .font("Helvetica-Oblique")
+                .fillColor("#666666")
+                .text(`Issued: ${issueDate}`, {
+                  width: maxWidth,
+                  align: "left", // ← ADD THIS
+                  indent: 15,
+                  paragraphGap: 2,
+                });
+            }
+
+            // Add expiry date if available
+            if (cert.expiryDate) {
+              const expiryDate = formatDate(cert.expiryDate);
+              doc
+                .fontSize(8)
+                .font("Helvetica-Oblique")
+                .fillColor("#666666")
+                .text(`Expires: ${expiryDate}`, {
+                  width: maxWidth,
+                  align: "left", // ← ADD THIS
+                  indent: 15,
+                  paragraphGap: 2,
+                });
+            }
+
+            // Add credential ID if available
+            if (cert.credentialId) {
+              doc
+                .fontSize(8)
+                .font("Helvetica")
+                .fillColor("#666666")
+                .text(`ID: ${cert.credentialId}`, {
+                  width: maxWidth,
+                  align: "left", // ← ADD THIS
+                  indent: 15,
+                  paragraphGap: 2,
+                });
+            }
+
             if (index < visibleCerts.length - 1) {
-              doc.moveDown(0.2);
+              doc.moveDown(0.3);
             }
           });
-        }
-      }
-
-      // LANGUAGES SECTION (only if exists)
-      if (resumeData.languages && resumeData.languages.length > 0) {
-        const visibleLangs = resumeData.languages.filter(
-          (lang) => lang.isVisible !== false
-        );
-        if (visibleLangs.length > 0) {
-          addSectionHeader("LANGUAGES");
-
-          const langText = visibleLangs
-            .map((lang) => `${lang.name} (${lang.proficiency})`)
-            .join(", ");
-          doc
-            .fontSize(9)
-            .font("Helvetica")
-            .fillColor(primaryColor)
-            .text(langText);
         }
       }
 
