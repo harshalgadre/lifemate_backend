@@ -395,31 +395,8 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // CERTIFICATIONS SECTION (only if exists)
-      // if (resumeData.certifications && resumeData.certifications.length > 0) {
-      //   const visibleCerts = resumeData.certifications.filter(
-      //     (cert) => cert.isVisible !== false
-      //   );
-      //   if (visibleCerts.length > 0) {
-      //     addSectionHeader("CERTIFICATIONS");
 
-      //     visibleCerts.forEach((cert, index) => {
-      //       doc
-      //         .fontSize(9)
-      //         .font("Helvetica")
-      //         .fillColor(primaryColor)
-      //         .text(`• ${cert.name} - ${cert.issuingOrganization}`, {
-      //           indent: 0,
-      //         });
 
-      //       if (index < visibleCerts.length - 1) {
-      //         doc.moveDown(0.2);
-      //       }
-      //     });
-      //   }
-      // }
-
-      // LANGUAGES SECTION (only if exists)
       // CERTIFICATIONS SECTION (only if exists)
       if (resumeData.certifications && resumeData.certifications.length > 0) {
         const visibleCerts = resumeData.certifications.filter(
@@ -443,7 +420,7 @@ async function generateResumePDF(resumeData) {
                 width: maxWidth,
                 align: "left", // ← ADD THIS
                 indent: 0,
-                paragraphGap: 2,
+                // paragraphGap: 2,
               });
 
             // Add issue date if available
@@ -457,7 +434,7 @@ async function generateResumePDF(resumeData) {
                   width: maxWidth,
                   align: "left", // ← ADD THIS
                   indent: 15,
-                  paragraphGap: 2,
+                  // paragraphGap: 2,
                 });
             }
 
@@ -472,7 +449,7 @@ async function generateResumePDF(resumeData) {
                   width: maxWidth,
                   align: "left", // ← ADD THIS
                   indent: 15,
-                  paragraphGap: 2,
+                  // paragraphGap: 2,
                 });
             }
 
@@ -486,7 +463,7 @@ async function generateResumePDF(resumeData) {
                   width: maxWidth,
                   align: "left", // ← ADD THIS
                   indent: 15,
-                  paragraphGap: 2,
+                  // paragraphGap: 2,
                 });
             }
 
