@@ -16,6 +16,17 @@ function formatDate(date) {
 }
 
 /**
+ * Check if we need a new page
+ */
+function checkPageBreak(doc, spaceNeeded = 100) {
+  if (doc.y + spaceNeeded > doc.page.height - 50) {
+    doc.addPage();
+    return true;
+  }
+  return false;
+}
+
+/**
  * Generate PDF from resume data
  * @param {Object} resumeData - Resume data from Resume model
  * @returns {Promise<Buffer>} - PDF buffer
@@ -26,6 +37,7 @@ async function generateResumePDF(resumeData) {
       const doc = new PDFDocument({
         size: "A4",
         margins: { top: 50, bottom: 50, left: 60, right: 60 },
+        bufferPages: true,
       });
 
       const chunks = [];
@@ -35,12 +47,14 @@ async function generateResumePDF(resumeData) {
 
       // Get styling options
       const { styling = {} } = resumeData;
-      const primaryColor = "#000000";
-      const accentColor = "#000000";
-      const fontSize = 10;
+      const primaryColor = styling.primaryColor || "#000000";
+      const accentColor = styling.accentColor || "#4169E1";
+      const fontSize = styling.fontSize || 10;
 
-      // Helper function to add section header with separator line above
+      // Helper function to add section header with separator line
       const addSectionHeader = (title) => {
+        checkPageBreak(doc, 80);
+
         doc.moveDown(0.5);
 
         // Add light gray separator line before section
@@ -56,13 +70,16 @@ async function generateResumePDF(resumeData) {
         doc
           .fontSize(11)
           .font("Helvetica-Bold")
-          .fillColor("#4169E1") // Royal blue color like frontend
+          .fillColor(accentColor)
           .text(title.toUpperCase());
         doc.moveDown(0.3);
         doc.font("Helvetica").fillColor(primaryColor);
       };
 
-      // 1. HEADER - Personal Information (Left-aligned, Large Name)
+      const maxWidth =
+        doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+      // 1. HEADER - Personal Information
       const { personalInfo } = resumeData;
       doc
         .fontSize(26)
@@ -72,7 +89,7 @@ async function generateResumePDF(resumeData) {
 
       doc.moveDown(0.3);
 
-      // Contact info line (email • phone format)
+      // Contact info line
       const contactInfo = [];
       if (personalInfo.email) contactInfo.push(personalInfo.email);
       if (personalInfo.phone) contactInfo.push(personalInfo.phone);
@@ -109,13 +126,9 @@ async function generateResumePDF(resumeData) {
 
       doc.moveDown(0.5);
 
-      // PROFESSIONAL SUMMARY SECTION (only if exists)
+      // PROFESSIONAL SUMMARY SECTION
       if (resumeData.summary && resumeData.summary.trim()) {
         addSectionHeader("PROFESSIONAL SUMMARY");
-
-        // Set proper width for text wrapping
-        const maxWidth =
-          doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
         doc
           .fontSize(fontSize)
@@ -130,7 +143,7 @@ async function generateResumePDF(resumeData) {
         doc.moveDown(0.4);
       }
 
-      // WORK EXPERIENCE SECTION (only if exists)
+      // WORK EXPERIENCE SECTION
       if (resumeData.workExperience && resumeData.workExperience.length > 0) {
         const visibleExp = resumeData.workExperience.filter(
           (exp) => exp.isVisible !== false
@@ -139,7 +152,8 @@ async function generateResumePDF(resumeData) {
           addSectionHeader("WORK EXPERIENCE");
 
           visibleExp.forEach((exp, index) => {
-            // Position (bold) with date range on same line
+            checkPageBreak(doc, 80);
+
             const startDate = formatDate(exp.startDate);
             const endDate = exp.isCurrent ? "Present" : formatDate(exp.endDate);
             const dateText = `${startDate} - ${endDate}`;
@@ -150,11 +164,9 @@ async function generateResumePDF(resumeData) {
               .fillColor("#000000")
               .text(exp.position || "Position", { continued: true });
 
-            // Date range aligned right
             const posText = exp.position || "Position";
             const textWidth = doc.widthOfString(posText);
-            const pageWidth =
-              doc.page.width - doc.page.margins.left - doc.page.margins.right;
+            const pageWidth = maxWidth;
             const dateWidth = doc.widthOfString(dateText);
             const spacesNeeded = pageWidth - textWidth - dateWidth - 20;
 
@@ -166,14 +178,12 @@ async function generateResumePDF(resumeData) {
                 " ".repeat(Math.max(1, Math.floor(spacesNeeded / 3))) + dateText
               );
 
-            // Company name (red/orange color like frontend)
             doc
               .fontSize(9)
               .font("Helvetica")
               .fillColor("#D2691E")
               .text(exp.company || "Company");
 
-            // Location (if available)
             if (exp.location) {
               doc
                 .fontSize(9)
@@ -182,17 +192,15 @@ async function generateResumePDF(resumeData) {
                 .text(exp.location);
             }
 
-            // Description
             if (exp.description) {
               doc.moveDown(0.1);
               doc
                 .fontSize(9)
                 .font("Helvetica")
                 .fillColor("#333333")
-                .text(exp.description);
+                .text(exp.description, { width: maxWidth });
             }
 
-            // Achievements as bullet points
             if (exp.achievements && exp.achievements.length > 0) {
               doc.moveDown(0.1);
               exp.achievements.forEach((achievement) => {
@@ -211,7 +219,7 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // EDUCATION SECTION (only if exists)
+      // EDUCATION SECTION
       if (resumeData.education && resumeData.education.length > 0) {
         const visibleEdu = resumeData.education.filter(
           (edu) => edu.isVisible !== false
@@ -220,21 +228,20 @@ async function generateResumePDF(resumeData) {
           addSectionHeader("EDUCATION");
 
           visibleEdu.forEach((edu, index) => {
-            // Degree and field (bold)
+            checkPageBreak(doc, 60);
+
             doc
               .fontSize(10)
               .font("Helvetica-Bold")
               .fillColor("#000000")
               .text(`${edu.degree} in ${edu.field}`);
 
-            // Institution name (orange/brown color like frontend)
             doc
               .fontSize(9)
               .font("Helvetica")
               .fillColor("#D2691E")
               .text(edu.institution);
 
-            // Year
             if (edu.yearOfCompletion) {
               doc
                 .fontSize(9)
@@ -243,7 +250,6 @@ async function generateResumePDF(resumeData) {
                 .text(`${edu.yearOfCompletion}`);
             }
 
-            // Grade if available
             if (edu.grade) {
               doc
                 .fontSize(9)
@@ -259,7 +265,7 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // SKILLS SECTION (only if exists)
+      // SKILLS SECTION
       if (resumeData.skills && resumeData.skills.length > 0) {
         const visibleSkills = resumeData.skills.filter(
           (skill) => skill.isVisible !== false
@@ -267,9 +273,7 @@ async function generateResumePDF(resumeData) {
         if (visibleSkills.length > 0) {
           addSectionHeader("SKILLS");
 
-          // Display skills as rounded badges (like frontend)
           let xPos = doc.page.margins.left;
-          const yStart = doc.y;
           const badgeHeight = 18;
           const badgePadding = 10;
           const badgeSpacing = 8;
@@ -283,18 +287,15 @@ async function generateResumePDF(resumeData) {
             const badgeWidth = textWidth + badgePadding * 2;
             const pageWidth = doc.page.width - doc.page.margins.right;
 
-            // Check if badge fits on current line
             if (xPos + badgeWidth > pageWidth && index > 0) {
               xPos = doc.page.margins.left;
               currentLineY += lineHeight;
             }
 
-            // Draw rounded rectangle badge
             doc
               .roundedRect(xPos, currentLineY, badgeWidth, badgeHeight, 4)
               .fillAndStroke("#E8E8E8", "#E8E8E8");
 
-            // Draw skill text (centered vertically in badge)
             doc
               .fontSize(9)
               .font("Helvetica")
@@ -307,13 +308,12 @@ async function generateResumePDF(resumeData) {
             xPos += badgeWidth + badgeSpacing;
           });
 
-          // Move doc.y to after the last line of badges
           doc.y = currentLineY + badgeHeight + 5;
           doc.moveDown(0.3);
         }
       }
 
-      // PROJECTS SECTION (only if exists)
+      // PROJECTS SECTION
       if (resumeData.projects && resumeData.projects.length > 0) {
         const visibleProjects = resumeData.projects.filter(
           (proj) => proj.isVisible !== false
@@ -322,14 +322,14 @@ async function generateResumePDF(resumeData) {
           addSectionHeader("PROJECTS");
 
           visibleProjects.forEach((proj, index) => {
-            // Project title with technologies and links in same line
+            checkPageBreak(doc, 60);
+
             doc
               .fontSize(10)
               .font("Helvetica-Bold")
               .fillColor(primaryColor)
               .text(proj.title, { continued: true });
 
-            // Add technologies inline with separators
             if (proj.technologies && proj.technologies.length > 0) {
               doc
                 .font("Helvetica-Oblique")
@@ -340,24 +340,22 @@ async function generateResumePDF(resumeData) {
                 });
             }
 
-            // Add links (GitHub, Link, etc.)
             if (proj.url) {
               doc
                 .font("Helvetica-Bold")
                 .fillColor("#0066cc")
                 .text(` | Link`, { link: proj.url, underline: true });
             } else {
-              doc.text(""); // End line
+              doc.text("");
             }
 
-            // Description as bullet points
             if (proj.description) {
               doc.moveDown(0.1);
               doc
                 .fontSize(9)
                 .font("Helvetica")
                 .fillColor(primaryColor)
-                .text(`• ${proj.description}`, { indent: 0 });
+                .text(`• ${proj.description}`, { indent: 0, width: maxWidth });
             }
 
             if (index < visibleProjects.length - 1) {
@@ -367,7 +365,7 @@ async function generateResumePDF(resumeData) {
         }
       }
 
-      // CUSTOM SECTIONS (only if exists)
+      // CUSTOM SECTIONS
       if (resumeData.customSections && resumeData.customSections.length > 0) {
         const visibleSections = resumeData.customSections.filter(
           (sec) => sec.isVisible !== false
@@ -382,22 +380,20 @@ async function generateResumePDF(resumeData) {
                   .fontSize(9)
                   .font("Helvetica")
                   .fillColor(primaryColor)
-                  .text(`• ${item}`, { indent: 0 });
+                  .text(`• ${item}`, { indent: 0, width: maxWidth });
               });
             } else if (section.content) {
               doc
                 .fontSize(9)
                 .font("Helvetica")
                 .fillColor(primaryColor)
-                .text(`• ${section.content}`, { indent: 0 });
+                .text(`• ${section.content}`, { indent: 0, width: maxWidth });
             }
           });
         }
       }
 
-
-
-      // CERTIFICATIONS SECTION (only if exists)
+      // CERTIFICATIONS SECTION - ENHANCED & PROPERLY ALIGNED
       if (resumeData.certifications && resumeData.certifications.length > 0) {
         const visibleCerts = resumeData.certifications.filter(
           (cert) => cert.isVisible !== false
@@ -405,10 +401,9 @@ async function generateResumePDF(resumeData) {
         if (visibleCerts.length > 0) {
           addSectionHeader("CERTIFICATIONS");
 
-          const maxWidth =
-            doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
           visibleCerts.forEach((cert, index) => {
+            checkPageBreak(doc, 60);
+
             // Certification name and issuing organization
             const certText = `${cert.name} - ${cert.issuingOrganization}`;
 
@@ -418,9 +413,8 @@ async function generateResumePDF(resumeData) {
               .fillColor(primaryColor)
               .text(`• ${certText}`, {
                 width: maxWidth,
-                align: "left", // ← ADD THIS
+                align: "left",
                 indent: 0,
-                // paragraphGap: 2,
               });
 
             // Add issue date if available
@@ -432,9 +426,8 @@ async function generateResumePDF(resumeData) {
                 .fillColor("#666666")
                 .text(`Issued: ${issueDate}`, {
                   width: maxWidth,
-                  align: "left", // ← ADD THIS
+                  align: "left",
                   indent: 15,
-                  // paragraphGap: 2,
                 });
             }
 
@@ -447,9 +440,8 @@ async function generateResumePDF(resumeData) {
                 .fillColor("#666666")
                 .text(`Expires: ${expiryDate}`, {
                   width: maxWidth,
-                  align: "left", // ← ADD THIS
+                  align: "left",
                   indent: 15,
-                  // paragraphGap: 2,
                 });
             }
 
@@ -461,9 +453,8 @@ async function generateResumePDF(resumeData) {
                 .fillColor("#666666")
                 .text(`ID: ${cert.credentialId}`, {
                   width: maxWidth,
-                  align: "left", // ← ADD THIS
+                  align: "left",
                   indent: 15,
-                  // paragraphGap: 2,
                 });
             }
 
@@ -471,6 +462,25 @@ async function generateResumePDF(resumeData) {
               doc.moveDown(0.3);
             }
           });
+        }
+      }
+
+      // LANGUAGES SECTION
+      if (resumeData.languages && resumeData.languages.length > 0) {
+        const visibleLangs = resumeData.languages.filter(
+          (lang) => lang.isVisible !== false
+        );
+        if (visibleLangs.length > 0) {
+          addSectionHeader("LANGUAGES");
+
+          const langText = visibleLangs
+            .map((lang) => `${lang.name} (${lang.proficiency})`)
+            .join(", ");
+          doc
+            .fontSize(9)
+            .font("Helvetica")
+            .fillColor(primaryColor)
+            .text(langText, { width: maxWidth });
         }
       }
 
@@ -490,10 +500,8 @@ async function generateResumePDF(resumeData) {
  */
 async function generateAndUploadResumePDF(resumeData, jobSeekerId) {
   try {
-    // Generate PDF buffer
     const pdfBuffer = await generateResumePDF(resumeData);
 
-    // Upload to Cloudinary
     const uploadResult = await uploadToCloudinary(
       pdfBuffer,
       `lifemate/resumes/${jobSeekerId}`,
