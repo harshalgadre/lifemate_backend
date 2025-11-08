@@ -9,10 +9,15 @@ const {
   notFoundResponse,
   forbiddenResponse,
 } = require("../utils/response");
-const { uploadToCloudinary } = require("../config/cloudinary");
+const {
+  sendApplicationNotificationEmail,
+  sendApplicationSubmittedToJobSeeker,
+  sendApplicationStatusUpdateToJobSeeker,
+} = require("../services/emailService");
 
-// Build filters helper
-const buildFilters = (q) => {
+const { uploadToCloudinary } = require("../config/cloudinary");
+// Build filters for list endpoints
+const buildFilters = (q = {}) => {
   const f = {};
   if (q.status) f.status = q.status;
   if (q.job) f.job = q.job;
@@ -34,7 +39,7 @@ exports.apply = async (req, res) => {
     if (!job || !job.isOpen())
       return notFoundResponse(res, "Job not open for applications");
 
-    const jobSeeker = await JobSeeker.findOne({ user: req.user._id });
+    const jobSeeker = await JobSeeker.findOne({ user: req.user._id }).populate({ path: 'user', select: 'firstName lastName email' });
     if (!jobSeeker)
       return errorResponse(res, 403, "Job seeker profile not found");
 
@@ -107,6 +112,27 @@ exports.apply = async (req, res) => {
     // increment application count on job
     job.incApplications().catch(() => {});
 
+    // Send emails in background (non-blocking)
+    try {
+      // Notify employer of new application if notifications enabled
+      if (employer?.settings?.emailNotifications?.newApplication !== false) {
+        sendApplicationNotificationEmail(
+          employer.contactPerson.email,
+          employer.contactPerson.name || employer.organizationName,
+          job.title,
+          `${jobSeeker.user.firstName} ${jobSeeker.user.lastName}`.trim(),
+          jobSeeker.user.email
+        ).catch(() => {});
+      }
+      // Notify jobseeker confirmation
+      sendApplicationSubmittedToJobSeeker(
+        jobSeeker.user.email,
+        `${jobSeeker.user.firstName} ${jobSeeker.user.lastName}`.trim(),
+        job.title,
+        employer.organizationName
+      ).catch(() => {});
+    } catch (_) {}
+
     return successResponse(res, 201, "Application submitted", { application });
   } catch (err) {
     console.error("Apply error:", err);
@@ -144,6 +170,27 @@ exports.setRating = async (req, res) => {
 
     application.rating = rating;
     await application.save();
+
+    // Notify jobseeker when moved to Interview or Offered
+    try {
+      const status = application.status;
+      if (['Interview', 'Offered'].includes(status)) {
+        const candidate = application.jobSeeker;
+        const candidateName = candidate?.user ? `${candidate.user.firstName} ${candidate.user.lastName}`.trim() : '';
+        const candidateEmail = candidate?.user?.email;
+        const jobTitle = application.job?.title || 'Your Application';
+        const companyName = application.employer?.organizationName || 'Employer';
+        if (candidateEmail) {
+          sendApplicationStatusUpdateToJobSeeker(
+            candidateEmail,
+            candidateName,
+            jobTitle,
+            companyName,
+            status
+          ).catch(() => {});
+        }
+      }
+    } catch (_) {}
     return successResponse(res, 200, 'Rating updated', { application });
   } catch (err) {
     console.error('Set rating error:', err);
@@ -273,7 +320,10 @@ exports.getById = async (req, res) => {
 // PATCH /applications/:id/status (employer/admin)
 exports.updateStatus = async (req, res) => {
   try {
-    const application = await Application.findById(req.params.id);
+    const application = await Application.findById(req.params.id)
+      .populate('job')
+      .populate({ path: 'jobSeeker', populate: { path: 'user', select: 'firstName lastName email' } })
+      .populate('employer');
     if (!application) return notFoundResponse(res, "Application not found");
 
     if (req.user.role !== "admin") {
@@ -300,6 +350,28 @@ exports.updateStatus = async (req, res) => {
       at: new Date(),
     });
     await application.save();
+
+    // Notify jobseeker on key status changes
+    try {
+      if (["Interview", "Offered"].includes(status)) {
+        const candidate = application.jobSeeker;
+        const candidateName = candidate?.user
+          ? `${candidate.user.firstName} ${candidate.user.lastName}`.trim()
+          : "";
+        const candidateEmail = candidate?.user?.email;
+        const jobTitle = application.job?.title || "Your Application";
+        const companyName = application.employer?.organizationName || "Employer";
+        if (candidateEmail) {
+          sendApplicationStatusUpdateToJobSeeker(
+            candidateEmail,
+            candidateName,
+            jobTitle,
+            companyName,
+            status
+          ).catch(() => {});
+        }
+      }
+    } catch (_) {}
 
     return successResponse(res, 200, "Application status updated", {
       application,
