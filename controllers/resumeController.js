@@ -165,6 +165,22 @@ exports.updateResume = async (req, res) => {
       });
     }
 
+    // Sanitize payload to prevent version/concurrency issues and protected field updates
+    // Remove fields that must never be set by client
+    const protectedFields = [
+      '_id',
+      'userId',
+      '__v',
+      'createdAt',
+      'updatedAt',
+      'stats',
+      'pdfUrl',
+      'pdfPublicId'
+    ];
+    for (const field of protectedFields) {
+      if (field in updateData) delete updateData[field];
+    }
+
     // Update resume fields
     Object.assign(resume, updateData);
     await resume.save();

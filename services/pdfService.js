@@ -67,11 +67,16 @@ async function generateResumePDF(resumeData) {
           .stroke();
 
         doc.moveDown(0.3);
+        // Always start headers at left margin to keep alignment consistent
+        doc.x = doc.page.margins.left;
         doc
           .fontSize(11)
           .font("Helvetica-Bold")
           .fillColor(accentColor)
-          .text(title.toUpperCase());
+          .text(title.toUpperCase(), doc.page.margins.left, undefined, {
+            width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+            align: "left",
+          });
         doc.moveDown(0.3);
         doc.font("Helvetica").fillColor(primaryColor);
       };
@@ -309,6 +314,8 @@ async function generateResumePDF(resumeData) {
           });
 
           doc.y = currentLineY + badgeHeight + 5;
+          // Reset x so the next section header starts at left margin
+          doc.x = doc.page.margins.left;
           doc.moveDown(0.3);
         }
       }
@@ -380,20 +387,20 @@ async function generateResumePDF(resumeData) {
                   .fontSize(9)
                   .font("Helvetica")
                   .fillColor(primaryColor)
-                  .text(`• ${item}`, { indent: 0, width: maxWidth });
+                  .text(`• ${item}`, { align: "left" });
               });
             } else if (section.content) {
               doc
                 .fontSize(9)
                 .font("Helvetica")
                 .fillColor(primaryColor)
-                .text(`• ${section.content}`, { indent: 0, width: maxWidth });
+                .text(`• ${section.content}`, { align: "left" });
             }
           });
         }
       }
 
-      // CERTIFICATIONS SECTION - ENHANCED & PROPERLY ALIGNED
+      // CERTIFICATIONS SECTION (only if exists)
       if (resumeData.certifications && resumeData.certifications.length > 0) {
         const visibleCerts = resumeData.certifications.filter(
           (cert) => cert.isVisible !== false
@@ -402,64 +409,50 @@ async function generateResumePDF(resumeData) {
           addSectionHeader("CERTIFICATIONS");
 
           visibleCerts.forEach((cert, index) => {
-            checkPageBreak(doc, 60);
+            // Certification name (bold)
+            doc
+              .fontSize(10)
+              .font("Helvetica-Bold")
+              .fillColor("#000000")
+              .text(`• ${cert.name}`, { align: "left" });
 
-            // Certification name and issuing organization
-            const certText = `${cert.name} - ${cert.issuingOrganization}`;
-
+            // Issuing organization (orange color like frontend)
             doc
               .fontSize(9)
               .font("Helvetica")
-              .fillColor(primaryColor)
-              .text(`• ${certText}`, {
-                width: maxWidth,
-                align: "left",
-                indent: 0,
-              });
+              .fillColor("#D2691E")
+              .text(`  ${cert.issuingOrganization}`, { align: "left" });
 
-            // Add issue date if available
+            // Issue and expiry dates on same line (gray)
+            const dateInfo = [];
             if (cert.issueDate) {
               const issueDate = formatDate(cert.issueDate);
-              doc
-                .fontSize(8)
-                .font("Helvetica-Oblique")
-                .fillColor("#666666")
-                .text(`Issued: ${issueDate}`, {
-                  width: maxWidth,
-                  align: "left",
-                  indent: 15,
-                });
+              dateInfo.push(`Issued: ${issueDate}`);
             }
-
-            // Add expiry date if available
             if (cert.expiryDate) {
               const expiryDate = formatDate(cert.expiryDate);
+              dateInfo.push(`Expires: ${expiryDate}`);
+            }
+            
+            if (dateInfo.length > 0) {
               doc
                 .fontSize(8)
-                .font("Helvetica-Oblique")
+                .font("Helvetica")
                 .fillColor("#666666")
-                .text(`Expires: ${expiryDate}`, {
-                  width: maxWidth,
-                  align: "left",
-                  indent: 15,
-                });
+                .text(`  ${dateInfo.join(" | ")}`, { align: "left" });
             }
 
-            // Add credential ID if available
+            // Credential ID if available
             if (cert.credentialId) {
               doc
                 .fontSize(8)
                 .font("Helvetica")
                 .fillColor("#666666")
-                .text(`ID: ${cert.credentialId}`, {
-                  width: maxWidth,
-                  align: "left",
-                  indent: 15,
-                });
+                .text(`  ID: ${cert.credentialId}`, { align: "left" });
             }
 
             if (index < visibleCerts.length - 1) {
-              doc.moveDown(0.3);
+              doc.moveDown(0.4);
             }
           });
         }
