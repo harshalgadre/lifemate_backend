@@ -19,6 +19,102 @@ const createTransporter = () => {
 };
 
 /**
+ * Notify jobseeker: application submitted
+ */
+const sendApplicationSubmittedToJobSeeker = async (candidateEmail, candidateName, jobTitle, companyName) => {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"LifeMate" <${process.env.EMAIL_FROM || 'noreply@lifemate.com'}>`,
+      to: candidateEmail,
+      subject: `Application Submitted: ${jobTitle} at ${companyName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">LifeMate</h1>
+            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Healthcare Job Platform</p>
+          </div>
+
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-bottom: 20px;">Your application is submitted!</h2>
+            <p style="color: #666; line-height: 1.6;">Hi ${candidateName},</p>
+            <p style="color: #666; line-height: 1.6;">We've sent your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/jobseeker/applications" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                View your applications
+              </a>
+            </div>
+            <p style="color: #666; line-height: 1.6; font-size: 14px;">We'll notify you when the employer reviews or updates your status.</p>
+          </div>
+
+          <div style="background: #333; padding: 20px; text-align: center;">
+            <p style="color: #999; margin: 0; font-size: 14px;">© 2024 LifeMate. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Application submitted email sent to jobseeker:', result.messageId);
+    return result;
+  } catch (error) {
+    console.error('Error sending application submitted email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Notify jobseeker: application status update (Interview/Offered)
+ */
+const sendApplicationStatusUpdateToJobSeeker = async (candidateEmail, candidateName, jobTitle, companyName, status) => {
+  try {
+    const transporter = createTransporter();
+
+    const statusColor = status === 'Offered' ? '#28a745' : '#1e90ff';
+    const subject = status === 'Offered'
+      ? `Congratulations! Offer for ${jobTitle}`
+      : `You're moved to Interview for ${jobTitle}`;
+
+    const mailOptions = {
+      from: `"LifeMate" <${process.env.EMAIL_FROM || 'noreply@lifemate.com'}>`,
+      to: candidateEmail,
+      subject: `${subject} - ${companyName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">LifeMate</h1>
+            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Healthcare Job Platform</p>
+          </div>
+
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: ${statusColor}; margin-bottom: 20px;">${subject}</h2>
+            <p style="color: #666; line-height: 1.6;">Hi ${candidateName},</p>
+            <p style="color: #666; line-height: 1.6;">Your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong> has been updated to <strong>${status}</strong>.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/jobseeker/applications" style="background: ${statusColor}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                View details
+              </a>
+            </div>
+          </div>
+
+          <div style="background: #333; padding: 20px; text-align: center;">
+            <p style="color: #999; margin: 0; font-size: 14px;">© 2024 LifeMate. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Application status update email sent to jobseeker:', result.messageId);
+    return result;
+  } catch (error) {
+    console.error('Error sending application status update email:', error);
+    throw error;
+  }
+};
+
+/**
  * Send email verification email
  * @param {string} email - Recipient email
  * @param {string} token - Verification token
@@ -414,4 +510,7 @@ module.exports = {
   sendApplicationNotificationEmail,
   sendInterviewInvitationEmail,
   sendWelcomeEmail,
+  // Added exports below
+  sendApplicationSubmittedToJobSeeker,
+  sendApplicationStatusUpdateToJobSeeker,
 };

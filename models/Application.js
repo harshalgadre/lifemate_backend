@@ -26,7 +26,7 @@ const applicationSchema = new mongoose.Schema({
   // timeline and status tracking
   status: {
     type: String,
-    enum: ['Applied', 'Under Review', 'Interview', 'Offered', 'Rejected', 'Withdrawn', 'Hired'],
+    enum: ['Applied', 'Under Review', 'Interview', 'Offered', 'Rejected', 'Withdrawn'],
     default: 'Applied',
     index: true,
   },
@@ -58,7 +58,7 @@ const applicationSchema = new mongoose.Schema({
   history: [{
     status: {
       type: String,
-      enum: ['Applied', 'Under Review', 'Interview', 'Offered', 'Rejected', 'Withdrawn', 'Hired'],
+      enum: ['Applied', 'Under Review', 'Interview', 'Offered', 'Rejected', 'Withdrawn'],
     },
     note: { type: String, trim: true, maxlength: 1000 },
     by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
