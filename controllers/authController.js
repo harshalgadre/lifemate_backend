@@ -10,6 +10,7 @@ const emailService = require('../services/emailService');
  * Handles user registration, login, logout, and token management
  */
 
+
 /**
  * Register a new user
  * @param {Object} req - Express request object
@@ -530,6 +531,94 @@ const changePassword = async (req, res) => {
   }
 };
 
+/**
+ * Handle Google OAuth Login/Registration
+ * This is called by the Passport Google strategy.
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const googleLogin = async (req, res) => {
+  try {
+    if (!req.user) {
+      return errorResponse(res, 400, 'Google user profile not found.');
+    }
+
+    const { _id, role } = req.user;
+
+    // Generate tokens
+    const tokens = generateTokens(_id, role);
+
+    // Add refresh token to user
+    await req.user.addRefreshToken(tokens.refreshToken);
+
+    // Set refresh token as HTTP-only cookie
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    // Prepare user response
+    const userResponse = {
+      id: req.user._id,
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      role: req.user.role,
+      phone: req.user.phone,
+      profileImage: req.user.profileImage,
+      isEmailVerified: req.user.isEmailVerified,
+      lastLogin: req.user.lastLogin,
+    };
+
+    // This endpoint is typically not called directly by the frontend.
+    // The oauthController redirects. However, if it were, this would be the response.
+    return successResponse(res, 200, 'Google login successful', {
+      user: userResponse,
+      accessToken: tokens.accessToken,
+    });
+  } catch (error) {
+    console.error('Google login handler error:', error);
+    return errorResponse(res, 500, 'Google login failed.');
+  }
+};
+
+/**
+ * This function is designed to be used as the callback for the Passport Google strategy.
+ * It finds a user by their Google ID or creates a new one.
+ */
+const findOrCreateGoogleUser = async (accessToken, refreshToken, profile, done) => {
+  try {
+    // 1. Find user by googleId
+    let user = await User.findOne({ googleId: profile.id });
+
+    if (user) {
+      return done(null, user); // User found, login
+    }
+
+    // 2. If no user, create one
+    const role = profile.state || 'jobseeker'; // 'state' is passed from the initial auth request
+    user = await User.create({
+      googleId: profile.id,
+      email: profile.emails[0].value,
+      firstName: profile.name.givenName,
+      lastName: profile.name.familyName,
+      profileImage: profile.photos[0].value,
+      isEmailVerified: true, // Email from Google is considered verified
+      role: role,
+    });
+
+    if (role === 'jobseeker') {
+      await JobSeeker.create({ user: user._id });
+    }
+
+    return done(null, user); // New user created and logged in
+  } catch (error) {
+    return done(error, false);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -542,4 +631,6 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  googleLogin,
+  findOrCreateGoogleUser,
 };
