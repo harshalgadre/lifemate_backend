@@ -62,6 +62,44 @@ exports.list = async (req, res) => {
   }
 };
 
+// GET /jobs/my (employer) -> list only jobs created by the authenticated employer
+exports.listByEmployer = async (req, res) => {
+  try {
+    // find employer profile for the authenticated user
+    const employer = await Employer.findOne({ user: req.user._id });
+    if (!employer) return errorResponse(res, 403, 'Employer profile not found');
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 10);
+    const skip = (page - 1) * limit;
+
+    const filters = buildJobFilters(req.query);
+    // limit to this employer's jobs only
+    filters.employer = employer._id;
+
+    const sort = req.query.sort || '-postedAt';
+    if (!req.query.includeArchived) {
+      filters.status = { $ne: 'Archived' };
+    }
+
+    const [items, total] = await Promise.all([
+      Job.find(filters).sort(sort).skip(skip).limit(limit),
+      Job.countDocuments(filters),
+    ]);
+
+    return successResponse(res, 200, 'Employer jobs fetched', {
+      items,
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    console.error('List employer jobs error:', err);
+    return errorResponse(res, 500, 'Failed to fetch employer jobs');
+  }
+};
+
 // GET /jobs/:id
 exports.getById = async (req, res) => {
   try {

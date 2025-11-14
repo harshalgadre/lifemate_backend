@@ -7,6 +7,10 @@ const { uploadDocument } = require('../middlewares/upload');
 
 // Public/optional-auth listing and details
 router.get('/', optionalAuth, jobController.list);
+// Employer-only listing (jobs created by authenticated employer)
+// Place this before the '/:id' param route so 'my' isn't treated as an id
+router.get('/my', authenticate, requireEmployer, jobController.listByEmployer);
+
 router.get('/:id', optionalAuth, jobController.getById);
 
 // Employer/admin protected operations
