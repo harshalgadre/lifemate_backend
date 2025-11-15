@@ -136,6 +136,11 @@ exports.create = async (req, res) => {
     }
 
     const job = await Job.create(payload);
+
+    // Update employer's job stats
+    await employer.updateJobStats(1);
+    await employer.updateActiveJobStats(1);
+
     return successResponse(res, 201, "Job created", { job });
   } catch (err) {
     console.error("Create job error:", err);
@@ -186,15 +191,29 @@ exports.changeStatus = async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return notFoundResponse(res, "Job not found");
 
+    let employer;
     if (req.user.role !== "admin") {
-      const employer = await Employer.findOne({ user: req.user._id });
+      employer = await Employer.findOne({ user: req.user._id });
       if (!employer || job.employer.toString() !== employer._id.toString()) {
         return errorResponse(res, 403, "Not authorized to change status");
       }
+    } else {
+      employer = await Employer.findById(job.employer);
     }
 
+    const oldStatus = job.status;
     job.status = status;
     await job.save();
+
+    // Update active job stats if the status change affects it
+    if (oldStatus !== status) {
+      if (status === 'Active') {
+        await employer.updateActiveJobStats(1);
+      } else if (oldStatus === 'Active') {
+        await employer.updateActiveJobStats(-1);
+      }
+    }
+
     return successResponse(res, 200, "Status updated", { job });
   } catch (err) {
     console.error("Change status error:", err);
@@ -208,15 +227,25 @@ exports.remove = async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return notFoundResponse(res, "Job not found");
 
+    let employer;
     if (req.user.role !== "admin") {
-      const employer = await Employer.findOne({ user: req.user._id });
+      employer = await Employer.findOne({ user: req.user._id });
       if (!employer || job.employer.toString() !== employer._id.toString()) {
         return errorResponse(res, 403, "Not authorized to delete");
       }
+    } else {
+      employer = await Employer.findById(job.employer);
     }
 
+    const oldStatus = job.status;
     job.status = "Archived";
     await job.save();
+
+    // Update active job stats if the job was active
+    if (oldStatus === 'Active') {
+      await employer.updateActiveJobStats(-1);
+    }
+
     return successResponse(res, 200, "Job archived");
   } catch (err) {
     console.error("Delete job error:", err);

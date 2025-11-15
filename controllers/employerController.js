@@ -13,6 +13,24 @@ exports.getMyProfile = async (req, res) => {
   }
 };
 
+// GET /api/employer/profile/refresh - Refetch and sync stats with database
+exports.refreshProfile = async (req, res) => {
+  try {
+    const employer = await Employer.findOne({ user: req.user._id });
+    if (!employer) return notFoundResponse(res, 'Employer profile not found');
+
+    // Sync active job posts from database
+    await employer.syncActiveJobStats();
+
+    // Fetch fresh copy
+    const updated = await Employer.findById(employer._id);
+    return successResponse(res, 200, 'Employer profile refreshed with latest stats', { employer: updated });
+  } catch (err) {
+    console.error('Refresh employer profile error:', err);
+    return errorResponse(res, 500, 'Failed to refresh employer profile');
+  }
+};
+
 // POST /api/employer/profile (create or update in one call)
 exports.createOrUpdateProfile = async (req, res) => {
   try {

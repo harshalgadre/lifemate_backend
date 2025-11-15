@@ -469,8 +469,34 @@ employerSchema.methods.canReceiveApplications = function() {
  */
 employerSchema.methods.updateJobStats = function(increment = 1) {
   this.stats.totalJobPosts += increment;
+  return this.save();
+};
+
+/**
+ * Update active job post statistics
+ */
+employerSchema.methods.updateActiveJobStats = function(increment = 1) {
   this.stats.activeJobPosts += increment;
   return this.save();
+};
+
+/**
+ * Recalculate active job posts from database (for accuracy)
+ * Call this method to sync the stat with actual active jobs in DB
+ */
+employerSchema.methods.syncActiveJobStats = async function() {
+  try {
+    const Job = require('./Job');
+    const activeCount = await Job.countDocuments({
+      employer: this._id,
+      status: 'Active'
+    });
+    this.stats.activeJobPosts = activeCount;
+    return this.save();
+  } catch (err) {
+    console.error('Failed to sync active job stats:', err);
+    throw err;
+  }
 };
 
 /**
