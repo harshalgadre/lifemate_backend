@@ -139,7 +139,10 @@ exports.create = async (req, res) => {
 
     // Update employer's job stats
     await employer.updateJobStats(1);
-    await employer.updateActiveJobStats(1);
+    // Only count as active if job status is 'Active' (default is 'Pending')
+    if (job.status === 'Active') {
+      await employer.updateActiveJobStats(1);
+    }
 
     return successResponse(res, 201, "Job created", { job });
   } catch (err) {
@@ -207,9 +210,12 @@ exports.changeStatus = async (req, res) => {
 
     // Update active job stats if the status change affects it
     if (oldStatus !== status) {
-      if (status === 'Active') {
+      // If transitioning TO 'Active', increment
+      if (status === 'Active' && oldStatus !== 'Active') {
         await employer.updateActiveJobStats(1);
-      } else if (oldStatus === 'Active') {
+      }
+      // If transitioning FROM 'Active' to something else, decrement
+      else if (oldStatus === 'Active' && status !== 'Active') {
         await employer.updateActiveJobStats(-1);
       }
     }

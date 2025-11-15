@@ -500,6 +500,37 @@ employerSchema.methods.syncActiveJobStats = async function() {
 };
 
 /**
+ * Recalculate all stats from database (for full accuracy)
+ * Syncs totalJobPosts, activeJobPosts, totalApplications, and totalHires
+ */
+employerSchema.methods.syncAllStats = async function() {
+  try {
+    const Job = require('./Job');
+    const Application = require('./Application');
+    
+    const totalJobs = await Job.countDocuments({ employer: this._id });
+    const activeJobs = await Job.countDocuments({
+      employer: this._id,
+      status: 'Active'
+    });
+    const totalApps = await Application.countDocuments({ employer: this._id });
+    const totalHires = await Application.countDocuments({
+      employer: this._id,
+      status: 'Offered'
+    });
+    
+    this.stats.totalJobPosts = totalJobs;
+    this.stats.activeJobPosts = activeJobs;
+    this.stats.totalApplications = totalApps;
+    this.stats.totalHires = totalHires;
+    return this.save();
+  } catch (err) {
+    console.error('Failed to sync all stats:', err);
+    throw err;
+  }
+};
+
+/**
  * Update application statistics
  */
 employerSchema.methods.updateApplicationStats = function(increment = 1) {

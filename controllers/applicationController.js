@@ -109,8 +109,10 @@ exports.apply = async (req, res) => {
     }
 
     const application = await Application.create(payload);
-    // increment application count on job
+    // increment application count on job (non-blocking)
     job.incApplications().catch(() => {});
+    // increment total applications count on employer (non-blocking)
+    employer.updateApplicationStats(1).catch(() => {});
 
     // Send emails in background (non-blocking)
     try {
@@ -340,6 +342,7 @@ exports.updateStatus = async (req, res) => {
       }
     }
 
+    const oldStatus = application.status;
     const { status, note } = req.body;
     application.status = status;
     application.updatedAtManual = new Date();
@@ -350,6 +353,23 @@ exports.updateStatus = async (req, res) => {
       at: new Date(),
     });
     await application.save();
+
+    // Update employer stats if status changed to/from "Offered"
+    let employer = application.employer;
+    if (!employer || !employer._id) {
+      employer = await Employer.findById(application.employer);
+    }
+    
+    if (employer) {
+      // If transitioning TO "Offered", increment totalHires
+      if (status === 'Offered' && oldStatus !== 'Offered') {
+        await employer.updateHireStats(1);
+      }
+      // If transitioning FROM "Offered" to something else, decrement totalHires
+      else if (oldStatus === 'Offered' && status !== 'Offered') {
+        await employer.updateHireStats(-1);
+      }
+    }
 
     // Notify jobseeker on key status changes
     try {
