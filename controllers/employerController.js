@@ -19,8 +19,9 @@ exports.refreshProfile = async (req, res) => {
     const employer = await Employer.findOne({ user: req.user._id });
     if (!employer) return notFoundResponse(res, 'Employer profile not found');
 
-    // Sync active job posts from database
+    // Sync all stats from database
     await employer.syncActiveJobStats();
+    await employer.syncAllStats();
 
     // Fetch fresh copy
     const updated = await Employer.findById(employer._id);
