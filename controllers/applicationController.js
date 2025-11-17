@@ -39,7 +39,10 @@ exports.apply = async (req, res) => {
     if (!job || !job.isOpen())
       return notFoundResponse(res, "Job not open for applications");
 
-    const jobSeeker = await JobSeeker.findOne({ user: req.user._id }).populate({ path: 'user', select: 'firstName lastName email' });
+    const jobSeeker = await JobSeeker.findOne({ user: req.user._id }).populate({
+      path: "user",
+      select: "firstName lastName email",
+    });
     if (!jobSeeker)
       return errorResponse(res, 403, "Job seeker profile not found");
 
@@ -156,17 +159,27 @@ exports.apply = async (req, res) => {
 exports.setRating = async (req, res) => {
   try {
     const { rating } = req.body;
-    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
-      return validationErrorResponse(res, [{ field: 'rating', message: 'Rating must be between 1 and 5' }]);
+    if (typeof rating !== "number" || rating < 1 || rating > 5) {
+      return validationErrorResponse(res, [
+        { field: "rating", message: "Rating must be between 1 and 5" },
+      ]);
     }
 
-    const application = await Application.findById(req.params.id).populate('job');
-    if (!application) return notFoundResponse(res, 'Application not found');
+    const application = await Application.findById(req.params.id).populate(
+      "job"
+    );
+    if (!application) return notFoundResponse(res, "Application not found");
 
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       const employer = await Employer.findOne({ user: req.user._id });
-      if (!employer || application.employer.toString() !== employer._id.toString()) {
-        return forbiddenResponse(res, 'Not authorized to rate this application');
+      if (
+        !employer ||
+        application.employer.toString() !== employer._id.toString()
+      ) {
+        return forbiddenResponse(
+          res,
+          "Not authorized to rate this application"
+        );
       }
     }
 
@@ -176,12 +189,15 @@ exports.setRating = async (req, res) => {
     // Notify jobseeker when moved to Interview or Offered
     try {
       const status = application.status;
-      if (['Interview', 'Offered'].includes(status)) {
+      if (["Interview", "Offered"].includes(status)) {
         const candidate = application.jobSeeker;
-        const candidateName = candidate?.user ? `${candidate.user.firstName} ${candidate.user.lastName}`.trim() : '';
+        const candidateName = candidate?.user
+          ? `${candidate.user.firstName} ${candidate.user.lastName}`.trim()
+          : "";
         const candidateEmail = candidate?.user?.email;
-        const jobTitle = application.job?.title || 'Your Application';
-        const companyName = application.employer?.organizationName || 'Employer';
+        const jobTitle = application.job?.title || "Your Application";
+        const companyName =
+          application.employer?.organizationName || "Employer";
         if (candidateEmail) {
           sendApplicationStatusUpdateToJobSeeker(
             candidateEmail,
@@ -193,10 +209,10 @@ exports.setRating = async (req, res) => {
         }
       }
     } catch (_) {}
-    return successResponse(res, 200, 'Rating updated', { application });
+    return successResponse(res, 200, "Rating updated", { application });
   } catch (err) {
-    console.error('Set rating error:', err);
-    return errorResponse(res, 500, 'Failed to update rating');
+    console.error("Set rating error:", err);
+    return errorResponse(res, 500, "Failed to update rating");
   }
 };
 
@@ -277,12 +293,15 @@ exports.listEmployerApplications = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const application = await Application.findById(req.params.id)
-      .populate('job')
+      .populate("job")
       .populate({
-        path: 'jobSeeker',
-        populate: { path: 'user', select: 'firstName lastName email phone profileImage role' }
+        path: "jobSeeker",
+        populate: {
+          path: "user",
+          select: "firstName lastName email phone profileImage role",
+        },
       })
-      .populate('employer');
+      .populate("employer");
 
     if (!application) return notFoundResponse(res, "Application not found");
 
@@ -294,10 +313,12 @@ exports.getById = async (req, res) => {
       const ownsAsSeeker =
         jobSeeker &&
         application.jobSeeker.toString() === jobSeeker._id.toString();
-      const ownsAsEmployer = employer && (
-        application.employer.toString() === employer._id.toString() ||
-        (application.job && application.job.employer && application.job.employer.toString() === employer._id.toString())
-      );
+      const ownsAsEmployer =
+        employer &&
+        (application.employer.toString() === employer._id.toString() ||
+          (application.job &&
+            application.job.employer &&
+            application.job.employer.toString() === employer._id.toString()));
       if (!ownsAsSeeker && !ownsAsEmployer) {
         return forbiddenResponse(
           res,
@@ -323,17 +344,22 @@ exports.getById = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const application = await Application.findById(req.params.id)
-      .populate('job')
-      .populate({ path: 'jobSeeker', populate: { path: 'user', select: 'firstName lastName email' } })
-      .populate('employer');
+      .populate("job")
+      .populate({
+        path: "jobSeeker",
+        populate: { path: "user", select: "firstName lastName email" },
+      })
+      .populate("employer");
     if (!application) return notFoundResponse(res, "Application not found");
 
     if (req.user.role !== "admin") {
       const employer = await Employer.findOne({ user: req.user._id });
-      const ownsAsEmployer = employer && (
-        application.employer.toString() === employer._id.toString() ||
-        (application.job && application.job.employer && application.job.employer.toString() === employer._id.toString())
-      );
+      const ownsAsEmployer =
+        employer &&
+        (application.employer.toString() === employer._id.toString() ||
+          (application.job &&
+            application.job.employer &&
+            application.job.employer.toString() === employer._id.toString()));
       if (!ownsAsEmployer) {
         return forbiddenResponse(
           res,
@@ -359,14 +385,14 @@ exports.updateStatus = async (req, res) => {
     if (!employer || !employer._id) {
       employer = await Employer.findById(application.employer);
     }
-    
+
     if (employer) {
       // If transitioning TO "Offered", increment totalHires
-      if (status === 'Offered' && oldStatus !== 'Offered') {
+      if (status === "Offered" && oldStatus !== "Offered") {
         await employer.updateHireStats(1);
       }
       // If transitioning FROM "Offered" to something else, decrement totalHires
-      else if (oldStatus === 'Offered' && status !== 'Offered') {
+      else if (oldStatus === "Offered" && status !== "Offered") {
         await employer.updateHireStats(-1);
       }
     }
@@ -380,7 +406,8 @@ exports.updateStatus = async (req, res) => {
           : "";
         const candidateEmail = candidate?.user?.email;
         const jobTitle = application.job?.title || "Your Application";
-        const companyName = application.employer?.organizationName || "Employer";
+        const companyName =
+          application.employer?.organizationName || "Employer";
         if (candidateEmail) {
           sendApplicationStatusUpdateToJobSeeker(
             candidateEmail,
@@ -430,5 +457,50 @@ exports.listApplicationsForJob = async (req, res) => {
   } catch (err) {
     console.error("List applications for job error:", err);
     return errorResponse(res, 500, "Failed to fetch applications");
+  }
+};
+
+exports.getApplicationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const app = await Application.findById(id)
+      .populate({
+        path: "jobSeeker",
+        select:
+          "user summary professionalSummary skills workExperience education resume",
+        populate: [
+          {
+            path: "user",
+            select: "firstName lastName email phone profileImage",
+          },
+          { path: "resume", select: "url fileUrl filename originalName" },
+        ],
+      })
+      .populate({ path: "job", select: "title organizationName" })
+      .populate({ path: "employer", select: "organizationName" })
+      .lean();
+
+    if (!app) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Application not found" });
+    }
+
+    // Normalize resume for frontend (expecting { url, filename })
+    const r = app?.jobSeeker?.resume;
+    if (r && typeof r === "object") {
+      app.jobSeeker.resume = {
+        url: r.fileUrl || r.url || "",
+        filename: r.originalName || r.filename || "Resume",
+      };
+    }
+
+    return res.status(200).json({ success: true, data: { application: app } });
+  } catch (err) {
+    console.error("getApplicationById error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch application" });
   }
 };
