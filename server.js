@@ -32,7 +32,7 @@ app.use(helmet());
 
 // CORS configuration
 const allowedOrigins = [
-  "https://career-made-frontend.vercel.app",
+  "https://lifemate-frontend.vercel.app",
   "http://localhost:3000",
 ];
 app.use(
