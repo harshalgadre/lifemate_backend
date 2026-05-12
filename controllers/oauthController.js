@@ -11,7 +11,7 @@ exports.startGoogle = (req, res, next) => {
 
 // GET /api/oauth/google/callback
 exports.googleCallback = [
-  passport.authenticate('google', { session: false, failureRedirect: '/auth/google/failure' }),
+  passport.authenticate('google', { session: false, failureRedirect: process.env.OAUTH_FAILURE_REDIRECT || '/api/oauth/google/failure' }),
   async (req, res) => {
     try {
       const tokens = generateTokens(req.user._id, req.user.role);
