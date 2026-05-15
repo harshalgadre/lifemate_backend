@@ -1,0 +1,37 @@
+# Dependencies — we install these fresh inside the container
+# using "npm ci", so copying them from the host is wasteful
+# and can cause platform-specific issues (e.g., bcrypt native bindings)
+node_modules
+
+# Environment files — NEVER bake secrets into the Docker image!
+# Pass them at runtime via: docker run --env-file .env
+# or via docker-compose environment/env_file directives
+.env
+.env.*
+
+# Git files — unnecessary in the container and adds ~50MB+
+.git
+.gitignore
+
+# Editor/IDE configuration files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Documentation — not needed for running the app
+README.md
+docs/
+
+# Docker files — prevent recursive build issues
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

@@ -180,6 +180,63 @@ The server will start at `http://localhost:5000`.
 | `npm start` | Start production server (`node server.js`) |
 | `npm run dev` | Start dev server with auto-reload (`nodemon server.js`) |
 
+### Docker Setup (Alternative)
+
+The project includes Docker support for containerizing the API. MongoDB runs on **Atlas** (cloud) — no local MongoDB container needed.
+
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+#### Step 1: Make sure your `.env` file has the Atlas connection string
+```
+MONGODB_URI=mongodb+srv://your-user:your-pass@cluster0.xxxxx.mongodb.net/lifemate
+```
+
+#### Step 2: Build and run
+```bash
+# Build and start the API container
+docker compose up --build
+
+# Or run in the background (detached mode)
+docker compose up --build -d
+
+# View logs
+docker compose logs -f
+
+# Stop the container
+docker compose down
+```
+
+The API will be available at `http://localhost:5000`.
+
+#### Without Docker Compose (standalone)
+```bash
+# Build the image
+docker build -t lifemate-api .
+
+# Run with your .env file
+docker run -p 5000:5000 --env-file .env --name lifemate-api lifemate-api
+```
+
+#### Docker Files
+
+| File | Purpose |
+|---|---|
+| `Dockerfile` | Multi-stage build (Alpine Linux, non-root user, healthcheck) |
+| `.dockerignore` | Excludes `node_modules`, `.env`, `.git` from the image |
+| `docker-compose.yml` | Runs the API container with env vars from `.env` |
+
+#### Verify Docker Setup
+```bash
+# Check running containers
+docker compose ps
+
+# Test the API
+curl http://localhost:5000/health
+
+# Check container health
+docker inspect --format='{{.State.Health.Status}}' lifemate-api
+```
+
 ---
 
 ## Environment Variables

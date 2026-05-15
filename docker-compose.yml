@@ -1,0 +1,45 @@
+# ============================================================
+# Docker Compose — LifeMate Backend API (Atlas MongoDB)
+# ============================================================
+# This file runs ONLY the API container.
+# MongoDB runs on Atlas (cloud), not in a local container.
+#
+# Usage:
+#   docker compose up --build        (foreground)
+#   docker compose up --build -d     (background)
+#   docker compose down              (stop)
+
+
+services:
+
+  # ----------------------------------------------------------
+  # LifeMate Backend API
+  # ----------------------------------------------------------
+  api:
+    # Build the Docker image from the Dockerfile in this directory
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Name the container for easy reference in commands
+    container_name: lifemate-api
+
+    # Auto-restart if the container crashes (but not if you manually stop it)
+    restart: unless-stopped
+
+    # Map host port 5000 → container port 5000
+    # Access the API at http://localhost:5000
+    ports:
+      - "5000:5000"
+
+    # Load ALL environment variables from your .env file.
+    # This includes MONGODB_URI (pointing to Atlas), JWT secrets,
+    # Cloudinary keys, Google OAuth credentials, etc.
+    # The .env file is NOT baked into the image — it's read at
+    # container start time, keeping secrets safe.
+    env_file:
+      - .env
+
+    # Override NODE_ENV to production inside the container
+    environment:
+      NODE_ENV: production
