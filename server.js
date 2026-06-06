@@ -19,7 +19,9 @@ const employerRoutes = require("./routes/employer");
 const jobSeekerRoutes = require("./routes/jobseeker");
 const resumeRoutes = require('./routes/resume');
 const adminRoutes = require("./routes/admin");
+const aiRoutes = require("./routes/ai");
 const passport =require("./config/passport");
+const { validateAiConfig } = require("./config/ai");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -88,6 +90,13 @@ app.use('/api/employer', employerRoutes);
 app.use('/api/jobseeker', jobSeekerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/ai', aiRoutes);
+
+// Validate AI configuration on startup
+const { valid: aiValid, warnings: aiWarnings } = validateAiConfig();
+if (!aiValid) {
+  aiWarnings.forEach((w) => console.warn(w));
+}
 
 // Health check endpoint
 app.get("/health", (req, res) => {

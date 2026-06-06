@@ -2,3 +2,8 @@
 .env
 
 node_modules/
+
+docs/
+
+GEMINI.md
+genai_ideas_and_roadmap.md
