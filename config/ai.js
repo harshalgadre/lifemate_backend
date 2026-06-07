@@ -17,7 +17,7 @@ const aiConfig = {
   // Feature flags
   features: {
     resumeSummary: true,
-    matchScorer: false,    // Feature 2 — not yet implemented
+    matchScorer: true,     // Feature 2 — implemented
     semanticSearch: false, // Feature 4 — not yet implemented
     screeningAgent: false, // Feature 6 — not yet implemented
   },
