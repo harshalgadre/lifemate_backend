@@ -240,22 +240,22 @@ Rules:
     const filter = {};
 
     if (parsed.specialization) {
-      filter.specialization = parsed.specialization;
+      filter.specialization = { $eq: parsed.specialization };
     }
     if (parsed.jobType) {
-      filter.jobType = parsed.jobType;
+      filter.jobType = { $eq: parsed.jobType };
     }
     if (parsed.shift) {
-      filter.shift = parsed.shift;
+      filter.shift = { $eq: parsed.shift };
     }
     if (parsed.isRemote === true || parsed.isRemote === false) {
-      filter.isRemote = parsed.isRemote;
+      filter.isRemote = { $eq: parsed.isRemote };
     }
     if (parsed.city) {
-      filter['location.city'] = { $regex: new RegExp(parsed.city, 'i') };
+      filter['location.city'] = { $eq: parsed.city };
     }
     if (parsed.state) {
-      filter['location.state'] = { $regex: new RegExp(parsed.state, 'i') };
+      filter['location.state'] = { $eq: parsed.state };
     }
 
     return filter;
