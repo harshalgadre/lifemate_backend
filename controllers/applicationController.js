@@ -52,7 +52,11 @@ exports.apply = async (req, res) => {
     // Normalize body fields for both JSON and multipart
     let coverLetter = req.body.coverLetter;
     if (typeof coverLetter === "string") {
-      coverLetter = { text: coverLetter };
+      try {
+        coverLetter = JSON.parse(coverLetter);
+      } catch (e) {
+        coverLetter = { text: coverLetter };
+      }
     } else if (!coverLetter || typeof coverLetter !== "object") {
       coverLetter = {};
     }
@@ -75,7 +79,7 @@ exports.apply = async (req, res) => {
       answers,
     };
 
-    // Handle optional file uploads (multer memory storage is used in route)
+    let resumePayload = null;
     if (req.files && req.files.resume && req.files.resume[0]) {
       const file = req.files.resume[0];
       const up = await uploadToCloudinary(
@@ -83,13 +87,23 @@ exports.apply = async (req, res) => {
         `lifemate/applications/${jobSeeker._id}`,
         "raw"
       );
-      payload.resume = {
+      resumePayload = {
         url: up.secure_url,
         filename: file.originalname,
         uploadedAt: new Date(),
         publicId: up.public_id,
         bytes: up.bytes,
       };
+    } else if (req.body.resume) {
+      try {
+        resumePayload = JSON.parse(req.body.resume);
+      } catch (e) {
+        resumePayload = req.body.resume; // Just in case it is already an object
+      }
+    }
+    
+    if (resumePayload) {
+      payload.resume = resumePayload;
     }
 
     if (
