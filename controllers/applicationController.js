@@ -301,9 +301,36 @@ exports.getById = async (req, res) => {
           select: "firstName lastName email phone profileImage role",
         },
       })
-      .populate("employer");
+      .populate("employer")
+      .lean(); // Add lean to allow property mutation
 
     if (!application) return notFoundResponse(res, "Application not found");
+
+    // FALLBACK: If jobseeker filled out Resume Builder instead of Profile, merge that data
+    if (application.jobSeeker && application.jobSeeker.user) {
+      const Resume = require("../models/Resume");
+      const builtResume = await Resume.findOne({ userId: application.jobSeeker.user._id }).sort({ updatedAt: -1 }).lean();
+      
+      if (builtResume) {
+        const js = application.jobSeeker;
+        if (!js.workExperience || js.workExperience.length === 0) js.workExperience = builtResume.workExperience;
+        if (!js.education || js.education.length === 0) js.education = builtResume.education;
+        if (!js.skills || js.skills.length === 0) js.skills = builtResume.skills;
+        if (!js.summary && !js.bio) js.summary = builtResume.summary;
+        
+        if (builtResume.personalInfo) {
+          if (!js.user.phone && builtResume.personalInfo.phone) {
+            js.user.phone = builtResume.personalInfo.phone;
+          }
+          if (!js.location && builtResume.personalInfo.address) {
+            const { city, state } = builtResume.personalInfo.address;
+            if (city || state) {
+              js.location = [city, state].filter(Boolean).join(", ");
+            }
+          }
+        }
+      }
+    }
 
     const isAdmin = req.user.role === "admin";
 
@@ -312,10 +339,10 @@ exports.getById = async (req, res) => {
       const employer = await Employer.findOne({ user: req.user._id });
       const ownsAsSeeker =
         jobSeeker &&
-        application.jobSeeker.toString() === jobSeeker._id.toString();
+        application.jobSeeker._id.toString() === jobSeeker._id.toString();
       const ownsAsEmployer =
         employer &&
-        (application.employer.toString() === employer._id.toString() ||
+        (application.employer._id.toString() === employer._id.toString() ||
           (application.job &&
             application.job.employer &&
             application.job.employer.toString() === employer._id.toString()));
@@ -328,8 +355,7 @@ exports.getById = async (req, res) => {
 
       // Mark viewed by employer when appropriate (non-blocking)
       if (ownsAsEmployer && !application.isViewedByEmployer) {
-        application.isViewedByEmployer = true;
-        application.save().catch(() => {});
+        Application.findByIdAndUpdate(application._id, { isViewedByEmployer: true }).catch(() => {});
       }
     }
 
