@@ -7,6 +7,24 @@ const {
   notFoundResponse,
 } = require("../utils/response");
 
+// Feature 4: Semantic Search — auto-index hooks (fire-and-forget, never blocks response)
+const { embedJob, removeJobEmbedding } = require('../services/ai/jobEmbeddingPipeline');
+const { aiConfig } = require('../config/ai');
+
+const triggerEmbedding = (jobId) => {
+  if (!aiConfig.features.semanticSearch) return;
+  embedJob(jobId).catch((err) =>
+    console.warn(`⚠️  Auto-embed failed for job ${jobId}: ${err.message}`)
+  );
+};
+
+const triggerRemoveEmbedding = (jobId) => {
+  if (!aiConfig.features.semanticSearch) return;
+  removeJobEmbedding(jobId).catch((err) =>
+    console.warn(`⚠️  Auto-remove-embed failed for job ${jobId}: ${err.message}`)
+  );
+};
+
 // Build filters for listing
 const buildJobFilters = (q) => {
   const f = {};
@@ -142,6 +160,8 @@ exports.create = async (req, res) => {
     // Only count as active if job status is 'Active' (default is 'Pending')
     if (job.status === 'Active') {
       await employer.updateActiveJobStats(1);
+      // Auto-index for semantic search (non-blocking)
+      triggerEmbedding(job._id);
     }
 
     return successResponse(res, 201, "Job created", { job });
@@ -173,6 +193,12 @@ exports.update = async (req, res) => {
 
     Object.assign(job, req.body);
     await job.save();
+
+    // Re-index updated job for semantic search if it's active (non-blocking)
+    if (job.status === 'Active') {
+      triggerEmbedding(job._id);
+    }
+
     return successResponse(res, 200, "Job updated", { job });
   } catch (err) {
     console.error("Update job error:", err);
@@ -210,13 +236,15 @@ exports.changeStatus = async (req, res) => {
 
     // Update active job stats if the status change affects it
     if (oldStatus !== status) {
-      // If transitioning TO 'Active', increment
+      // If transitioning TO 'Active', increment + embed for semantic search
       if (status === 'Active' && oldStatus !== 'Active') {
         await employer.updateActiveJobStats(1);
+        triggerEmbedding(job._id); // Auto-index for semantic search
       }
-      // If transitioning FROM 'Active' to something else, decrement
+      // If transitioning FROM 'Active' to something else, decrement + remove embedding
       else if (oldStatus === 'Active' && status !== 'Active') {
         await employer.updateActiveJobStats(-1);
+        triggerRemoveEmbedding(job._id); // Remove from semantic search index
       }
     }
 

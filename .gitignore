@@ -7,3 +7,6 @@ docs/
 
 GEMINI.md
 genai_ideas_and_roadmap.md
+
+# Feature 4: Embedding model cache (downloaded by @xenova/transformers on first run)
+.model-cache/

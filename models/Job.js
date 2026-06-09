@@ -121,6 +121,14 @@ const jobSchema = new mongoose.Schema({
   // Visibility
   isFeatured: { type: Boolean, default: false },
   isRemote: { type: Boolean, default: false },
+
+  // Feature 4: Semantic Search — Vector Embedding (384 dims, all-MiniLM-L6-v2)
+  // Atlas Vector Search uses its own index — do NOT add index: true here
+  embedding: {
+    type: [Number],
+    select: false, // Never return embedding in normal queries (saves bandwidth)
+  },
+  embeddingUpdatedAt: { type: Date, select: false },
 }, {
   timestamps: true,
 });

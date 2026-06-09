@@ -36,6 +36,7 @@ app.use(helmet());
 const allowedOrigins = [
   "https://lifemate-frontend.vercel.app",
   "http://localhost:3000",
+  "http://localhost:3002",
 ];
 app.use(
   cors({

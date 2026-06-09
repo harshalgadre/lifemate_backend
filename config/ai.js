@@ -4,6 +4,7 @@
  * Reads and validates AI-related environment variables
  * 
  * Provider: Groq (fast inference with Llama 3 models)
+ * Embeddings: @xenova/transformers — all-MiniLM-L6-v2 (local, free)
  */
 
 const aiConfig = {
@@ -18,7 +19,7 @@ const aiConfig = {
   features: {
     resumeSummary: true,
     matchScorer: true,     // Feature 2 — implemented
-    semanticSearch: false, // Feature 4 — not yet implemented
+    semanticSearch: true,  // Feature 4 — implemented
     screeningAgent: false, // Feature 6 — not yet implemented
   },
 
@@ -28,11 +29,19 @@ const aiConfig = {
     maxRequests: 20,           // 20 AI requests per window
   },
 
-  // Summary generation config
+  // Summary generation config (Feature 1)
   summary: {
     maxLength: 1000, // matches Resume schema maxlength
     defaultTone: 'professional',
     allowedTones: ['professional', 'creative', 'concise'],
+  },
+
+  // Vector embedding config (Feature 4)
+  embedding: {
+    model: process.env.EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
+    dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS) || 384,
+    vectorIndexName: process.env.MONGODB_VECTOR_INDEX_NAME || 'job_vector_index',
+    batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE) || 5,
   },
 };
 
@@ -55,6 +64,10 @@ const validateAiConfig = () => {
   if (aiConfig.maxOutputTokens < 100 || aiConfig.maxOutputTokens > 8000) {
     warnings.push(`⚠️  AI_MAX_TOKENS (${aiConfig.maxOutputTokens}) is out of range [100, 8000]. Using 2000.`);
     aiConfig.maxOutputTokens = 2000;
+  }
+
+  if (aiConfig.features.semanticSearch && !process.env.MONGODB_VECTOR_INDEX_NAME) {
+    warnings.push('⚠️  MONGODB_VECTOR_INDEX_NAME not set. Using default: "job_vector_index". Create this index in MongoDB Atlas UI.');
   }
 
   return {
