@@ -14,7 +14,7 @@
 const mongoose = require('mongoose');
 const { ChatPromptTemplate } = require('@langchain/core/prompts');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
-const { getLLM } = require('./llmConfig');
+const { withModelFallback } = require('./llmConfig');
 const { embedText } = require('./embeddingConfig');
 const { aiConfig } = require('../../config/ai');
 
@@ -195,7 +195,6 @@ const escapeLangChain = (str) => String(str).replace(/{/g, '{{').replace(/}/g, '
  * @returns {Promise<Object>} MongoDB filter conditions
  */
 const extractFiltersFromQuery = async (query) => {
-  const llm = getLLM();
   const outputParser = new StringOutputParser();
 
   const safeQueryForFilter = escapeLangChain(query);
@@ -228,8 +227,10 @@ Rules:
     ['human', `Query: ${safeQueryForFilter}`],
   ]);
 
-  const chain = prompt.pipe(llm).pipe(outputParser);
-  const raw = await chain.invoke({});
+  const raw = await withModelFallback(
+    (llm) => prompt.pipe(llm).pipe(outputParser),
+    {}
+  );
 
   try {
     // Clean markdown fences
@@ -348,50 +349,11 @@ const semanticJobSearch = async (query, options = {}) => {
         .map((job, idx) => formatJobSummaryForLLM(job, idx + 1))
         .join('\n\n---\n\n');
 
-      const llm = getLLM();
       const outputParser = new StringOutputParser();
-
-      // Escape curly braces in dynamic content to prevent LangChain template errors
-      // (job descriptions/requirements may contain { } which LangChain treats as variables)
-      const safeJobList = escapeLangChain(jobListText);
-      const safeQuery = escapeLangChain(trimmedQuery);
-
-      const rerankerPrompt = ChatPromptTemplate.fromMessages([
-        [
-          'system',
-          `You are a smart healthcare recruitment assistant. A job seeker searched for jobs using natural language.
-
-Your tasks:
-1. Write a 1-2 sentence SUMMARY of what you found for them (friendly, helpful tone).
-2. For each job, write a SHORT (1 sentence) relevance explanation of why it matches their query.
-
-RULES:
-- Be concise and helpful
-- Do NOT make up information
-- Focus on what specifically matches their search intent
-- Respond with ONLY valid JSON in this exact format (no extra text):
-
-{{
-  "summary": "<1-2 sentence overview of results>",
-  "explanations": {{
-    "1": "<why Job 1 matches>",
-    "2": "<why Job 2 matches>"
-  }}
-}}`,
-        ],
-        [
-          'human',
-          `User searched for: "${safeQuery}"
-
-Jobs found:
-${safeJobList}
-
-Provide summary and per-job explanations as JSON.`,
-        ],
-      ]);
-
-      const chain = rerankerPrompt.pipe(llm).pipe(outputParser);
-      const raw = await chain.invoke({});
+      const raw = await withModelFallback(
+        (llm) => rerankerPrompt.pipe(llm).pipe(outputParser),
+        {}
+      );
 
       // Parse LLM response
       const cleaned = raw.trim().replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');

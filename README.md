@@ -17,7 +17,7 @@
 | **Framework** | Express.js |
 | **Database** | MongoDB Atlas (Mongoose ODM) |
 | **Authentication** | JWT (Access + Refresh Tokens), Google OAuth 2.0 (Passport.js) |
-| **AI / LLM** | LangChain.js, Groq API (Llama 3.3 70B), Google Gemini |
+| **AI / LLM** | LangChain.js, Groq API (`openai/gpt-oss-20b` primary, `gpt-oss-120b` fallback) |
 | **Vector Embeddings** | `@xenova/transformers` — `all-MiniLM-L6-v2` (384-dim, runs locally) |
 | **Vector Search** | MongoDB Atlas Vector Search (ANN) |
 | **File Storage** | Cloudinary (resumes, PDFs, images, cover letters) |
@@ -57,15 +57,17 @@
 - Per-resume preview and download endpoints
 
 ### 5. 🤖 AI — Resume Summary Generator *(Feature 1)*
-- LangChain.js + Groq (Llama 3.3 70B) prompt chain
+- LangChain.js + Groq (`openai/gpt-oss-20b`) prompt chain
 - Formats experience, education, skills into LLM context
 - Supports tone options; optionally auto-saves summary to resume
+- **Auto-fallback:** `withModelFallback()` retries `gpt-oss-120b` if primary model is decommissioned
 
 ### 6. 🎯 AI — Smart Job-Resume Match Scorer *(Feature 2)*
 - LangChain.js + Groq structured JSON output
 - Returns overall score (0–100) + breakdown: skills, experience, education, specialization
 - Matched/missing skills, top 3 strengths, 3 improvement suggestions, verdict summary
 - Robust LLM output parsing with JSON extraction fallback (handles markdown fences)
+- **Auto-fallback:** `withModelFallback()` retries next model if current Groq model is decommissioned
 
 ### 7. 🔍 AI — Semantic Job Search / RAG Pipeline *(Feature 4)*
 - Full RAG pipeline: query → embed (384-dim, local) → Atlas Vector Search → LLM re-rank
@@ -74,6 +76,7 @@
 - Atlas-compatible `$eq` operator filters for all pre-filter fields
 - Admin batch-indexing endpoint + embedding coverage stats
 - Model: `Xenova/all-MiniLM-L6-v2` (quantized, cached locally in `.model-cache/`)
+- **Auto-fallback:** all 3 LLM calls inside the RAG pipeline use `withModelFallback()` for resilience
 
 ### 8. 📋 Application Tracking System (ATS)
 - 6 statuses: Applied → Under Review → Interview → Offered → Rejected → Withdrawn

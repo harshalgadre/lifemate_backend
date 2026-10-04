@@ -11,7 +11,14 @@ const aiConfig = {
   // LLM Provider Configuration
   provider: 'groq',
   apiKey: process.env.GROQ_API_KEY,
-  modelName: process.env.AI_MODEL_NAME || 'llama3-70b-8192',
+  // Primary model: gpt-oss-20b (fast, efficient — current Groq offering as of Oct 2026)
+  // Fallback: gpt-oss-120b (flagship, more capable)
+  modelName: process.env.AI_MODEL_NAME || 'openai/gpt-oss-20b',
+  // Ordered list of models to try if primary is decommissioned
+  fallbackModels: [
+    'openai/gpt-oss-20b',
+    'openai/gpt-oss-120b',
+  ],
   temperature: parseFloat(process.env.AI_TEMPERATURE) || 0.7,
   maxOutputTokens: parseInt(process.env.AI_MAX_TOKENS) || 2000,
 

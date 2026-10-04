@@ -9,7 +9,7 @@
 
 const { ChatPromptTemplate } = require('@langchain/core/prompts');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
-const { getLLM } = require('./llmConfig');
+const { withModelFallback } = require('./llmConfig');
 
 /**
  * Format resume data into a concise text block for the LLM
@@ -246,14 +246,11 @@ Return ONLY the JSON object with the match analysis.`
     ],
   ]);
 
-  const llm = getLLM();
   const outputParser = new StringOutputParser();
-  const chain = promptTemplate.pipe(llm).pipe(outputParser);
-
-  const rawOutput = await chain.invoke({
-    resumeText,
-    jobText,
-  });
+  const rawOutput = await withModelFallback(
+    (llm) => promptTemplate.pipe(llm).pipe(outputParser),
+    { resumeText, jobText }
+  );
 
   // Parse the structured output
   const result = parseLLMJson(rawOutput);

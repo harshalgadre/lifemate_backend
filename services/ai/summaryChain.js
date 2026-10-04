@@ -8,7 +8,7 @@
 
 const { ChatPromptTemplate } = require('@langchain/core/prompts');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
-const { getLLM } = require('./llmConfig');
+const { withModelFallback } = require('./llmConfig');
 const { aiConfig } = require('../../config/ai');
 
 /**
@@ -213,13 +213,10 @@ Please write a compelling {tone} professional summary for this candidate.`,
     ],
   ]);
 
-  // Create the chain: prompt → LLM → string output
-  const llm = getLLM();
+  // Create the chain using withModelFallback so if primary model is decommissioned,
+  // it automatically retries with the next model in the fallback list.
   const outputParser = new StringOutputParser();
-  const chain = promptTemplate.pipe(llm).pipe(outputParser);
-
-  // Invoke the chain with the resume data
-  const summary = await chain.invoke({
+  const input = {
     fullName,
     workExperience,
     education,
@@ -228,7 +225,12 @@ Please write a compelling {tone} professional summary for this candidate.`,
     projects,
     tone,
     toneInstructions,
-  });
+  };
+
+  const summary = await withModelFallback(
+    (llm) => promptTemplate.pipe(llm).pipe(outputParser),
+    input
+  );
 
   // Trim and validate the output
   const trimmedSummary = summary.trim();
