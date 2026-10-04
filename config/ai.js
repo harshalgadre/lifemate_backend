@@ -11,7 +11,7 @@ const aiConfig = {
   // LLM Provider Configuration
   provider: 'groq',
   apiKey: process.env.GROQ_API_KEY,
-  modelName: process.env.AI_MODEL_NAME || 'llama-3.3-70b-versatile',
+  modelName: process.env.AI_MODEL_NAME || 'llama3-70b-8192',
   temperature: parseFloat(process.env.AI_TEMPERATURE) || 0.7,
   maxOutputTokens: parseInt(process.env.AI_MAX_TOKENS) || 2000,
 
